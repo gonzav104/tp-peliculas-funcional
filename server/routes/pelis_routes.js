@@ -1,17 +1,10 @@
 import { Router } from 'express';
-// Solo importamos el servicio
-import { obtenerPeliculasPopulares } from '../services/tmdb.js';
+// Importamos el controlador
+import { getPopulares } from '../controllers/peliculas_controller.js';
 
 const router = Router();
 
-router.get('/populares', async (req, res) => {
-    try {
-        // Llamamos al servicio que ya nos devuelve los datos procesados
-        const peliculas = await obtenerPeliculasPopulares();
-        res.json(peliculas);
-    } catch (error) {
-        res.status(500).json({ error: 'Ocurrió un error al obtener las películas' });
-    }
-});
+// Definimos la ruta para obtener películas populares
+router.get('/populares', getPopulares);
 
 export default router;
