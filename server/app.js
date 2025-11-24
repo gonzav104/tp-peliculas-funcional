@@ -1,4 +1,3 @@
-// server/app.js
 import express from 'express';
 import cors from 'cors';
 
@@ -14,10 +13,10 @@ app.use(express.json());   // Permite recibir JSON en POSTs
 // Rutas
 app.use('/api/peliculas', peliculasRoutes);
 
-// Ruta de Health Check (para ver si vive)
+// Ruta de Health Check
 app.get('/api/status', (req, res) => {
     res.json({ estado: 'OK', mensaje: 'App configurada correctamente' });
 });
 
-// Exportamos la app configurada (PERO NO LA INICIAMOS AQUÍ)
+// Exportamos la app configurada (pero no la iniciamos aca)
 export default app;
