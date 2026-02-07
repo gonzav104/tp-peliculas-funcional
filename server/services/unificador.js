@@ -3,6 +3,7 @@
 import { obtenerDetallesPelicula } from './tmdb.js';
 import { buscarTrailerPelicula } from './youtube.js';
 
+
 // Tipo unificado de datos enriquecidos
 /**
  * @typedef {Object} PeliculaEnriquecida
@@ -38,7 +39,6 @@ import { buscarTrailerPelicula } from './youtube.js';
 const combinarFuentes = (datosTMDB, datosYouTube) => {
     // Retornamos directamente con casting para evitar variable redundante
     return /** @type {PeliculaEnriquecida} */ ({
-        // Datos de TMDB
         ...datosTMDB,
 
         // Enriquecimiento con YouTube

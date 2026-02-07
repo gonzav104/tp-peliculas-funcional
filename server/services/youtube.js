@@ -5,34 +5,21 @@ import { map, filter, pipe } from '../utils/funcional.js';
 const API_KEY = process.env.YOUTUBE_API_KEY;
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
-// --- DEFINICIONES DE TIPOS PARA INTELLIJ ---
+// --- CONSTANTE: VIDEO DE RESPALDO (CUOTA EXCEDIDA) ---
+// Usamos un video genérico (ej. intro de cine o cuenta regresiva) para no romper el frontend
+const FALLBACK_VIDEO = {
+    id: 'fallback_quota',
+    titulo: 'Trailer no disponible (Cuota YouTube Agotada)',
+    descripcion: 'Lo sentimos, se ha alcanzado el límite diario de peticiones a YouTube.',
+    thumbnail: 'https://via.placeholder.com/640x360?text=Trailer+No+Disponible',
+    canal: 'Sistema CineFuncional',
+    fechaPublicacion: new Date().toISOString(),
+    url: 'https://www.youtube.com/watch?v=EngW7tLk6R8', // Intro genérica
+    urlEmbed: 'https://www.youtube.com/embed/EngW7tLk6R8',
+    fuente: 'youtube'
+};
 
-/**
- * @typedef {Object} YouTubeSnippet
- * @property {string} title
- * @property {string} description
- * @property {string} channelTitle
- * @property {string} publishedAt
- * @property {{high: {url: string}, default: {url: string}}} thumbnails
- */
-
-/**
- * @typedef {Object} YouTubeVideoItem
- * @property {{videoId: string}} id
- * @property {YouTubeSnippet} snippet
- * @property {Object} [statistics]
- * @property {string} statistics.viewCount
- * @property {string} statistics.likeCount
- * @property {string} statistics.commentCount
- * @property {Object} [contentDetails]
- * @property {string} contentDetails.duration
- */
-
-/**
- * @typedef {Object} YouTubeResponse
- * @property {Array<YouTubeVideoItem>} items
- */
-
+// --- DEFINICIONES DE TIPOS (Igual que antes) ---
 /**
  * @template T
  * @typedef {Object} EitherType
@@ -42,12 +29,6 @@ const BASE_URL = 'https://www.googleapis.com/youtube/v3';
  */
 
 // Capa de acceso a YouTube
-/**
- * FETCHER GENÉRICO
- * @param {string} endpoint
- * @param {Object} params
- * @returns {Promise<EitherType<YouTubeResponse>>}
- */
 const fetchYouTube = async (endpoint, params = {}) => {
     try {
         const url = `${BASE_URL}${endpoint}`;
@@ -66,21 +47,26 @@ const fetchYouTube = async (endpoint, params = {}) => {
         return Either.Right(respuesta.data);
 
     } catch (error) {
-        console.error(`Error YouTube [${endpoint}]:`, error.message);
+        // Capturamos el status para saber si es un bloqueo por cuota (403)
+        const status = error.response ? error.response.status : 500;
+
+        if (status !== 403) {
+            console.error(`Error YouTube [${endpoint}]:`, error.message);
+        } else {
+            console.warn(`⚠️ YouTube Quota Excedida [${endpoint}]`);
+        }
+
         // @ts-ignore
         return Either.Left({
             mensaje: 'Error al consultar YouTube',
             detalle: error.message,
-            endpoint
+            endpoint,
+            status: status // <--- IMPORTANTE: Pasamos el status
         });
     }
 };
 
 // Transformaciones y filtros
-/**
- * NORMALIZA un video crudo
- * @param {YouTubeVideoItem} video
- */
 const normalizarVideoYouTube = (video) => ({
     id: video.id.videoId,
     titulo: video.snippet.title,
@@ -99,22 +85,12 @@ const pareceTrailerOficial = (video) => {
     return keywords.some(keyword => titulo.includes(keyword));
 };
 
-/**
- * PIPELINE DE LIMPIEZA
- * Definimos explícitamente que devuelve un Array para evitar errores de inferencia
- * @type {function(Array<YouTubeVideoItem>): Array<Object>}
- */
 const procesarVideosYouTube = pipe(
     map(normalizarVideoYouTube),
     filter(pareceTrailerOficial)
 );
 
 // Utilidades
-/**
- * PARSEAR DURACIÓN ISO 8601 a segundos
- * @param {string} duracion
- * @returns {number}
- */
 export const parsearDuracionISO = (duracion) => {
     if (!duracion) return 0;
     const match = duracion.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
@@ -125,11 +101,10 @@ export const parsearDuracionISO = (duracion) => {
     return horas * 3600 + minutos * 60 + segundos;
 };
 
-// Funciones principales exportadas
+// --- FUNCIONES PRINCIPALES ---
+
 /**
- * BUSCAR TRÁILER DE PELÍCULA
- * @param {string} tituloPelicula
- * @param {number|null} anio
+ * BUSCAR TRÁILER DE PELÍCULA (CON FALLBACK)
  */
 export const buscarTrailerPelicula = async (tituloPelicula, anio = null) => {
     if (!tituloPelicula) return null;
@@ -145,7 +120,15 @@ export const buscarTrailerPelicula = async (tituloPelicula, anio = null) => {
     });
 
     return resultado.fold(
-        () => null,
+        // CASO ERROR (Left)
+        (err) => {
+            // Si el error es por cuota (403), devolvemos el video de respaldo
+            if (err.status === 403) {
+                return FALLBACK_VIDEO;
+            }
+            return null; // Otro error, devolvemos null
+        },
+        // CASO ÉXITO (Right)
         (data) => {
             const videos = procesarVideosYouTube(data.items || []);
             return videos.length > 0 ? videos[0] : null;
@@ -155,8 +138,6 @@ export const buscarTrailerPelicula = async (tituloPelicula, anio = null) => {
 
 /**
  * BUSCAR MÚLTIPLES TRÁILERS
- * @param {string} tituloPelicula
- * @param {number} limite
  */
 export const buscarTrailersPelicula = async (tituloPelicula, limite = 3) => {
     if (!tituloPelicula) return [];
@@ -168,9 +149,12 @@ export const buscarTrailersPelicula = async (tituloPelicula, limite = 3) => {
     });
 
     return resultado.fold(
-        () => [],
+        (err) => {
+            // En plural, si hay error de cuota, podríamos devolver un array con el fallback
+            if (err.status === 403) return [FALLBACK_VIDEO];
+            return [];
+        },
         (data) => {
-            // Ya no necesitamos el casting manual porque procesarVideosYouTube está tipado
             const videos = procesarVideosYouTube(data.items || []);
             return videos.slice(0, limite);
         }
@@ -179,10 +163,10 @@ export const buscarTrailersPelicula = async (tituloPelicula, limite = 3) => {
 
 /**
  * ENRIQUECER VIDEO CON ESTADÍSTICAS
- * @param {string} videoId
  */
 export const obtenerEstadisticasVideo = async (videoId) => {
     if (!videoId) return null;
+    if (videoId === FALLBACK_VIDEO.id) return null; // No buscar stats del video fake
 
     const resultado = await fetchYouTube('/videos', {
         id: videoId,
@@ -194,7 +178,6 @@ export const obtenerEstadisticasVideo = async (videoId) => {
         (data) => {
             if (!data.items || data.items.length === 0) return null;
             const video = data.items[0];
-
             const segundos = parsearDuracionISO(video.contentDetails?.duration);
 
             return {

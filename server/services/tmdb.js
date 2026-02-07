@@ -1,4 +1,5 @@
 import axios from 'axios';
+import NodeCache from 'node-cache';
 import {
     procesarPeliculasEstandar,
     procesarPeliculasCalidad,
@@ -7,6 +8,11 @@ import { Either } from '../utils/funcional.js';
 
 const API_KEY = process.env.TMDB_API_KEY;
 const BASE_URL = 'https://api.themoviedb.org/3';
+
+// CONFIGURACIÓN DE CACHÉ
+// stdTTL: 3600 segundos = 1 hora de duración para los datos
+// checkperiod: 600 segundos = Revisa cada 10 minutos para borrar datos viejos
+const tmdbCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
 // --- DEFINICIONES DE TIPOS PARA INTELLIJ ---
 
@@ -156,16 +162,25 @@ export const obtenerDetallesPelicula = async (id) => {
     );
 };
 
-// Utilidad de memoización simple
+// Implementacion de memoización
 const memoize = (fn) => {
-    const cache = new Map();
     return async (...args) => {
-        const key = JSON.stringify(args);
-        if (cache.has(key)) {
-            return cache.get(key);
+        const key = JSON.stringify(args); // Se crea una clave única basada en los argumentos
+
+        // Intentar obtener de la caché
+        const valorGuardado = tmdbCache.get(key);
+        if (valorGuardado !== undefined) {
+            console.log(`⚡ Cache HIT: ${key}`);
+            return valorGuardado;
         }
+
+        // Si no existe, ejecutar la función real (API call)
         const resultado = await fn(...args);
-        cache.set(key, resultado);
+
+        // Guardar en caché
+        console.log(`💾 Cache MISS: ${key}`);
+        tmdbCache.set(key, resultado);
+
         return resultado;
     };
 };

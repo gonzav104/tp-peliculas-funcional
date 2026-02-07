@@ -24,140 +24,124 @@ import {
     obtenerEstadisticasVideo
 } from '../services/youtube.js';
 
-// ============================================
-// ENDPOINTS BÁSICOS
-// ============================================
+import {
+    buscarSchema,
+    maratonSchema,
+    maratonTematicoSchema,
+    maratonDecadaSchema
+} from '../schemas/peliculas.js';
+
+// Helper de validación
+const validar = (schema, data, res) => {
+    const resultado = schema.safeParse(data);
+    if (!resultado.success) {
+        res.status(400).json({
+            exito: false,
+            error: "Datos inválidos",
+            detalles: resultado.error.format()
+        });
+        return null;
+    }
+    return resultado.data;
+};
 
 export const getPopulares = async (req, res) => {
-    try {
-        const peliculas = await obtenerPeliculasPopulares();
-        res.json({ exito: true, cantidad: peliculas.length, datos: peliculas });
-    } catch (error) {
-        res.status(500).json({ exito: false, error: 'Error al obtener populares' });
-    }
+    const peliculas = await obtenerPeliculasPopulares();
+    res.json({ exito: true, cantidad: peliculas.length, datos: peliculas });
 };
 
 export const getPopularesEnriquecidas = async (req, res) => {
-    try {
-        const limite = parseInt(req.query.limite) || 5;
-        const peliculas = await obtenerPopularesEnriquecidas(limite);
-        const estadisticas = analizarUnificacion(peliculas);
-        res.json({ exito: true, cantidad: peliculas.length, estadisticas, datos: peliculas });
-    } catch (error) {
-        res.status(500).json({ exito: false, error: 'Error al enriquecer' });
-    }
+    const input = validar(buscarSchema.pick({ limite: true }), req.query, res);
+    if (!input) return;
+
+    const peliculas = await obtenerPopularesEnriquecidas(input.limite);
+    const estadisticas = analizarUnificacion(peliculas);
+    res.json({ exito: true, cantidad: peliculas.length, estadisticas, datos: peliculas });
 };
 
 export const getMejorCalificadas = async (req, res) => {
-    try {
-        const peliculas = await obtenerPeliculasCalidad();
-        res.json({ exito: true, cantidad: peliculas.length, datos: peliculas });
-    } catch (error) {
-        res.status(500).json({ exito: false, error: 'Error al obtener top rated' });
-    }
+    const peliculas = await obtenerPeliculasCalidad();
+    res.json({ exito: true, cantidad: peliculas.length, datos: peliculas });
 };
 
-// ============================================
-// ENDPOINTS DE BÚSQUEDA
-// ============================================
-
 export const buscar = async (req, res) => {
-    try {
-        const query = req.query.q;
-        if (!query) return res.status(400).json({ error: 'Falta q' });
-        const resultados = await buscarPeliculasMemo(query);
-        res.json({ exito: true, termino: query, cantidad: resultados.length, datos: resultados });
-    } catch (error) {
-        res.status(500).json({ error: 'Error búsqueda' });
-    }
+    const input = validar(buscarSchema, req.query, res);
+    if (!input) return;
+
+    const resultados = await buscarPeliculasMemo(input.q);
+    res.json({ exito: true, termino: input.q, cantidad: resultados.length, datos: resultados });
 };
 
 export const buscarEnriquecida = async (req, res) => {
-    try {
-        const query = req.query.q;
-        const limite = parseInt(req.query.limite) || 3;
-        if (!query) return res.status(400).json({ error: 'Falta q' });
-        const resultados = await buscarYEnriquecer(query, limite);
-        const estadisticas = analizarUnificacion(resultados);
-        res.json({ exito: true, termino: query, cantidad: resultados.length, estadisticas, datos: resultados });
-    } catch (error) {
-        res.status(500).json({ error: 'Error búsqueda enriquecida' });
-    }
+    const input = validar(buscarSchema, req.query, res);
+    if (!input) return;
+
+    const resultados = await buscarYEnriquecer(input.q, input.limite);
+    const estadisticas = analizarUnificacion(resultados);
+    res.json({ exito: true, termino: input.q, cantidad: resultados.length, estadisticas, datos: resultados });
 };
 
-// ============================================
-// ENDPOINTS DE MARATÓN
-// ============================================
+// --- MARATONES ---
 
 export const planearMaraton = async (req, res) => {
-    try {
-        const { tiempo, ratingMinimo, maximoPeliculas } = req.body;
-        if (!tiempo) return res.status(400).json({ error: 'Falta tiempo' });
+    const input = validar(maratonSchema, req.body, res);
+    if (!input) return;
 
-        const peliculas = await obtenerPopularesEnriquecidas(5);
-        const plan = planificarMaraton(peliculas, tiempo, { ratingMinimo, maximoPeliculas });
-        const analisis = analizarPlan(plan);
+    const peliculas = await obtenerPopularesEnriquecidas(10);
+    const plan = planificarMaraton(peliculas, input.tiempo, {
+        ratingMinimo: input.ratingMinimo,
+        maximoPeliculas: input.maximoPeliculas
+    });
 
-        res.json({ exito: true, plan, analisis });
-    } catch (error) {
-        res.status(500).json({ error: 'Error maratón' });
-    }
+    const analisis = analizarPlan(plan);
+    res.json({ exito: true, plan, analisis });
 };
 
 export const planearMaratonTematico = async (req, res) => {
-    try {
-        const { tiempo, generos } = req.body;
-        if (!tiempo || !generos) return res.status(400).json({ error: 'Faltan datos' });
+    const input = validar(maratonTematicoSchema, req.body, res);
+    if (!input) return;
 
-        const peliculas = await obtenerPopularesEnriquecidas(10);
-        const plan = planificarMaratonTematico(peliculas, tiempo, generos);
-        const analisis = analizarPlan(plan);
+    const peliculas = await obtenerPopularesEnriquecidas(15);
+    const plan = planificarMaratonTematico(peliculas, input.tiempo, input.generos);
+    const analisis = analizarPlan(plan);
 
-        res.json({ exito: true, tematica: generos.join(', '), plan, analisis });
-    } catch (error) {
-        res.status(500).json({ error: 'Error maratón temático' });
-    }
+    res.json({ exito: true, tematica: input.generos.join(', '), plan, analisis });
 };
 
 export const planearMaratonDecada = async (req, res) => {
-    try {
-        const { tiempo, decada } = req.body;
-        if (!tiempo || !decada) return res.status(400).json({ error: 'Faltan datos' });
+    const input = validar(maratonDecadaSchema, req.body, res);
+    if (!input) return;
 
-        // Buscar en API, Enriquecer, Planificar
-        const peliculasClasicas = await descubrirPeliculasPorDecada(parseInt(decada));
-        const peliculasEnriquecidas = await enriquecerListaPeliculas(peliculasClasicas.slice(0, 15));
+    const peliculasClasicas = await descubrirPeliculasPorDecada(input.decada);
 
-        // Usamos la función base planificarMaraton
-        const plan = planificarMaraton(peliculasEnriquecidas, tiempo);
-        const analisis = analizarPlan(plan);
-
-        res.json({ exito: true, tematica: `Década de ${decada}s`, plan, analisis });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Error maratón década' });
+    if (peliculasClasicas.length === 0) {
+        return res.json({ exito: true, mensaje: "No se encontraron películas", plan: [] });
     }
+
+    const peliculasEnriquecidas = await enriquecerListaPeliculas(peliculasClasicas.slice(0, 15));
+    const plan = planificarMaraton(peliculasEnriquecidas, input.tiempo);
+    const analisis = analizarPlan(plan);
+
+    res.json({ exito: true, tematica: `Década de ${input.decada}s`, plan, analisis });
 };
 
 export const getPresetsMaraton = (req, res) => {
     res.json({ exito: true, presets: presetsMaraton });
 };
 
-// ============================================
-// UTILIDADES
-// ============================================
+// --- UTILIDADES ---
 
 export const getTrailers = async (req, res) => {
-    const titulo = req.query.peli;
-    if (!titulo) return res.status(400).json({ error: 'Falta peli' });
-    const trailers = await buscarTrailersPelicula(titulo);
+    if (!req.query.peli) throw new Error("Falta parámetro peli");
+    // Al lanzar este error, Express 5 lo atrapa y lo manda a errorHandler.js
+
+    const trailers = await buscarTrailersPelicula(req.query.peli);
     res.json({ exito: true, datos: trailers });
 };
 
 export const getVideoStats = async (req, res) => {
-    const id = req.query.id;
-    if (!id) return res.status(400).json({ error: 'Falta id' });
-    const stats = await obtenerEstadisticasVideo(id);
+    if (!req.query.id) throw new Error("Falta parámetro id");
+    const stats = await obtenerEstadisticasVideo(req.query.id);
     res.json({ exito: true, datos: stats });
 };
 
