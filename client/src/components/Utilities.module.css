@@ -1,0 +1,406 @@
+/* === LOADING === */
+.loadingContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    min-height: 300px;
+}
+
+.spinner {
+    border: 4px solid rgba(225, 0, 80, 0.2);
+    border-top-color: #e10050;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.spinner.small {
+    width: 30px;
+    height: 30px;
+    border-width: 3px;
+}
+
+.spinner.medium {
+    width: 50px;
+    height: 50px;
+    border-width: 4px;
+}
+
+.spinner.large {
+    width: 70px;
+    height: 70px;
+    border-width: 5px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loadingMessage {
+    color: #a0a0a0;
+    margin-top: 20px;
+    font-size: 1rem;
+    text-align: center;
+}
+
+/* === ERROR === */
+.errorContainer {
+    background: rgba(255, 77, 77, 0.1);
+    border: 2px solid rgba(255, 77, 77, 0.3);
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    max-width: 600px;
+    margin: 40px auto;
+}
+
+.errorIcon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+}
+
+.errorTitle {
+    color: #ff6b6b;
+    font-size: 1.5rem;
+    margin-bottom: 12px;
+}
+
+.errorMessage {
+    color: #ff9999;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+.retryButton {
+    background: linear-gradient(135deg, #e10050 0%, #c70039 100%);
+    color: white;
+    border: none;
+    padding: 12px 32px;
+    border-radius: 30px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(225, 0, 80, 0.4);
+}
+
+.retryButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(225, 0, 80, 0.6);
+}
+
+/* === EMPTY STATE === */
+.emptyContainer {
+    text-align: center;
+    padding: 80px 20px;
+    min-height: 300px;
+}
+
+.emptyIcon {
+    font-size: 5rem;
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.emptyTitle {
+    color: #ffffff;
+    font-size: 1.5rem;
+    margin-bottom: 12px;
+}
+
+.emptyMessage {
+    color: #a0a0a0;
+    font-size: 1rem;
+    margin-bottom: 24px;
+}
+
+.emptyAction {
+    background: linear-gradient(135deg, #16213e 0%, #1a1a2e 100%);
+    color: white;
+    border: 2px solid rgba(225, 0, 80, 0.3);
+    padding: 12px 32px;
+    border-radius: 30px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.emptyAction:hover {
+    background: linear-gradient(135deg, #e10050 0%, #c70039 100%);
+    border-color: transparent;
+    transform: translateY(-2px);
+}
+
+/* === BADGE === */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.badge.size-small {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+}
+
+.badge.size-medium {
+    font-size: 0.85rem;
+    padding: 4px 12px;
+}
+
+.badge.size-large {
+    font-size: 1rem;
+    padding: 6px 16px;
+}
+
+.badge.default {
+    background: rgba(255, 255, 255, 0.1);
+    color: #a0a0a0;
+}
+
+.badge.primary {
+    background: linear-gradient(135deg, #e10050 0%, #c70039 100%);
+    color: white;
+}
+
+.badge.success {
+    background: linear-gradient(135deg, #00d084 0%, #00a86b 100%);
+    color: white;
+}
+
+.badge.warning {
+    background: linear-gradient(135deg, #ffd700 0%, #f0a500 100%);
+    color: #1a1a2e;
+}
+
+.badge.danger {
+    background: linear-gradient(135deg, #ff4d4d 0%, #c70039 100%);
+    color: white;
+}
+
+/* === TOOLTIP === */
+.tooltipContainer {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltipText {
+    visibility: hidden;
+    opacity: 0;
+    background: #1a1a2e;
+    color: white;
+    text-align: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    position: absolute;
+    z-index: 1000;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    transition: opacity 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.tooltipContainer:hover .tooltipText {
+    visibility: visible;
+    opacity: 1;
+}
+
+.tooltip-top {
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.tooltip-bottom {
+    top: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.tooltip-left {
+    right: 125%;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.tooltip-right {
+    left: 125%;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* === SKELETON === */
+.skeleton {
+    background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.05) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0.05) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.skeleton-text {
+    height: 16px;
+    margin-bottom: 8px;
+}
+
+.skeleton-rectangular {
+    border-radius: 12px;
+}
+
+.skeleton-circular {
+    border-radius: 50%;
+}
+
+/* === MOVIE GRID SKELETON === */
+.movieGridSkeleton {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 30px;
+}
+
+.movieCardSkeleton {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.skeletonInfo {
+    padding: 16px;
+}
+
+.skeletonInfo .skeleton {
+    margin-bottom: 12px;
+}
+
+/* === MODAL === */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modalContent {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 16px;
+    max-width: 90%;
+    max-height: 90vh;
+    overflow: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modalHeader h2 {
+    color: #ffffff;
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.modalClose {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modalClose:hover {
+    background: #e10050;
+    transform: rotate(90deg);
+}
+
+.modalBody {
+    padding: 24px;
+}
+
+/* === ERROR BOUNDARY === */
+.errorBoundary {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 40px;
+    text-align: center;
+}
+
+.errorBoundary h2 {
+    color: #ffffff;
+    font-size: 2rem;
+    margin-bottom: 16px;
+}
+
+.errorBoundary p {
+    color: #a0a0a0;
+    font-size: 1.1rem;
+    margin-bottom: 32px;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+    .modalContent {
+        max-width: 95%;
+    }
+
+    .errorContainer {
+        padding: 30px 20px;
+    }
+
+    .movieGridSkeleton {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 16px;
+    }
+}
