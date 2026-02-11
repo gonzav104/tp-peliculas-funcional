@@ -19,7 +19,7 @@ const FALLBACK_VIDEO = {
     fuente: 'youtube'
 };
 
-// --- DEFINICIONES DE TIPOS (Igual que antes) ---
+// --- DEFINICIONES DE TIPOS ---
 /**
  * @template T
  * @typedef {Object} EitherType

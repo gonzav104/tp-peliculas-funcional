@@ -29,7 +29,11 @@ export const maratonTematicoSchema = z.object({
     generos: z.array(z.string(), {
         required_error: "Debes enviar una lista de géneros",
         invalid_type_error: "Los géneros deben ser un array de textos"
-    }).nonempty("Debes elegir al menos un género")
+    }).nonempty("Debes elegir al menos un género"),
+
+    // Campos nuevos para control fino
+    ratingMinimo: z.number().min(0).max(10).default(5.0).optional(),
+    maximoPeliculas: z.number().int().positive().default(10).optional()
 });
 
 // Esquema para Maratón por Década

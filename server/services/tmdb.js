@@ -10,43 +10,7 @@ const API_KEY = process.env.TMDB_API_KEY;
 const BASE_URL = 'https://api.themoviedb.org/3';
 
 // CONFIGURACIÓN DE CACHÉ
-// stdTTL: 3600 segundos = 1 hora de duración para los datos
-// checkperiod: 600 segundos = Revisa cada 10 minutos para borrar datos viejos
 const tmdbCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
-
-// --- DEFINICIONES DE TIPOS PARA INTELLIJ ---
-
-/**
- * @typedef {Object} CastMember
- * @property {string} name
- * @property {string} character
- */
-
-/**
- * @typedef {Object} TMDBResponse
- * @property {Array} results
- * @property {number} id
- * @property {string} title
- * @property {string} original_title
- * @property {string} overview
- * @property {string} poster_path
- * @property {string} backdrop_path
- * @property {number} vote_average
- * @property {number} vote_count
- * @property {string} release_date
- * @property {number} runtime
- * @property {Array<{name: string}>} genres
- * @property {{ cast: CastMember[] }} credits
- * @property {{ results: Array }} videos
- */
-
-/**
- * @template T
- * @typedef {Object} EitherType
- * @property {boolean} isLeft
- * @property {function(function(T): any): EitherType} map
- * @property {function(function(any): any, function(T): any): any} fold
- */
 
 // Capa de acceso a TMDB
 const fetchTMDB = async (endpoint, params = {}) => {
@@ -97,7 +61,6 @@ export const obtenerPeliculasCalidad = async () => {
     );
 };
 
-// Esta funcion es necesaria para el endpoint POST /maraton-decada
 export const descubrirPeliculasPorDecada = async (decada) => {
     const inicio = `${decada}-01-01`;
     const fin = `${decada + 9}-12-31`;
@@ -152,10 +115,28 @@ export const obtenerDetallesPelicula = async (id) => {
             fecha: data.release_date,
             duracion: data.runtime,
             generos: data.genres?.map(g => g.name) || [],
+
+            // CAMPOS DE DETALLE
+            tagline: data.tagline,
+            presupuesto: data.budget,
+            ingresos: data.revenue,
+            idioma_original: data.original_language,
+            fecha_estreno: data.release_date,
+            productoras: data.production_companies?.map(p => p.name) || [],
+            paises: data.production_countries?.map(p => p.name) || [],
+
             reparto: data.credits?.cast?.slice(0, 10).map(actor => ({
                 nombre: actor.name,
-                personaje: actor.character
+                personaje: actor.character,
+                foto: actor.profile_path
+                    ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`
+                    : null
             })) || [],
+
+            directores: data.credits?.crew
+                ?.filter(crew => crew.job === 'Director')
+                .map(d => d.name) || [],
+
             videos: data.videos?.results || [],
             fuente: 'tmdb'
         })
@@ -165,19 +146,16 @@ export const obtenerDetallesPelicula = async (id) => {
 // Implementacion de memoización
 const memoize = (fn) => {
     return async (...args) => {
-        const key = JSON.stringify(args); // Se crea una clave única basada en los argumentos
+        const key = JSON.stringify(args);
 
-        // Intentar obtener de la caché
         const valorGuardado = tmdbCache.get(key);
         if (valorGuardado !== undefined) {
             console.log(`⚡ Cache HIT: ${key}`);
             return valorGuardado;
         }
 
-        // Si no existe, ejecutar la función real (API call)
         const resultado = await fn(...args);
 
-        // Guardar en caché
         console.log(`💾 Cache MISS: ${key}`);
         tmdbCache.set(key, resultado);
 

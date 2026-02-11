@@ -1,37 +1,39 @@
 import express from 'express';
 import cors from 'cors';
-import helmet from 'helmet'; // 1. Seguridad HTTP
-import rateLimit from 'express-rate-limit'; // 2. Protección contra abuso
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
+// Importamos las rutas (esto ya lo tenías bien)
 import peliculasRoutes from './routes/pelis_routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
 
 // --- CONFIGURACIÓN DE SEGURIDAD ---
-
-// A. Helmet: Protege cabeceras HTTP (oculta que usas Express, bloquea scripts maliciosos, etc)
 app.use(helmet());
 
-// B. Rate Limit: Solo permite 100 peticiones por IP cada 15 minutos
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 100, // Límite por IP
+    windowMs: 15 * 60 * 1000,
+    max: 100,
     message: {
         exito: false,
         error: 'Demasiadas peticiones, por favor intenta más tarde.'
     }
 });
-// Aplicamos el límite a todas las rutas que empiecen con /api
-app.use('/api', limiter);
 
 // --- MIDDLEWARES ESTÁNDAR ---
 app.use(cors());
 app.use(express.json());
 
 // --- RUTAS ---
+// Aplicamos el limitador a todo lo que sea /api
+app.use('/api', limiter);
+
+// ✅ AQUÍ ESTABA EL ERROR: FALTABA MONTAR LAS RUTAS DE PELÍCULAS
+// Esto conecta '/api/peliculas/populares...' con tu archivo de rutas
 app.use('/api/peliculas', peliculasRoutes);
 
+// Ruta de estado general
 app.get('/api/status', (req, res) => {
     res.json({ estado: 'OK', mensaje: 'App segura y optimizada' });
 });

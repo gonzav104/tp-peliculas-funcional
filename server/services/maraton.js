@@ -146,11 +146,25 @@ const generarDescripcion = (peliculas, tiempoTotal, ratingPromedio) => {
         `con rating promedio de ${ratingPromedio.toFixed(1)}★: ${titulos}`;
 };
 
-export const planificarMaratonTematico = (peliculas, tiempo, generos) => {
-    const filtradas = peliculas.filter(p =>
-        p.generos && p.generos.some(g => generos.includes(g))
-    );
-    return planificarMaraton(filtradas, tiempo);
+export const planificarMaratonTematico = (peliculas, tiempo, generos, opciones = {}) => {
+    const generosBuscados = generos.map(g => g.toLowerCase());
+    const filtradas = peliculas.filter(p => {
+        if (!p.generos || !Array.isArray(p.generos)) return false;
+        return p.generos.some(g => generosBuscados.includes(g.toLowerCase()));
+    });
+    if (filtradas.length === 0) {
+        // Retornamos estructura vacía segura para evitar errores
+        return {
+            peliculas: [],
+            tiempoTotal: 0,
+            tiempoDisponible: tiempo,
+            tiempoRestante: tiempo,
+            ratingPromedio: 0,
+            cantidadPeliculas: 0,
+            descripcion: "No se encontraron películas compatibles con los géneros seleccionados."
+        };
+    }
+    return planificarMaraton(filtradas, tiempo, opciones);
 };
 
 export const presetsMaraton = {

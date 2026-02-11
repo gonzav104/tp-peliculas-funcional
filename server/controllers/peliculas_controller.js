@@ -101,8 +101,16 @@ export const planearMaratonTematico = async (req, res) => {
     const input = validar(maratonTematicoSchema, req.body, res);
     if (!input) return;
 
-    const peliculas = await obtenerPopularesEnriquecidas(15);
-    const plan = planificarMaratonTematico(peliculas, input.tiempo, input.generos);
+    const peliculas = await obtenerPopularesEnriquecidas(50);
+    const plan = planificarMaratonTematico(
+        peliculas,
+        input.tiempo,
+        input.generos,
+        {
+            ratingMinimo: input.ratingMinimo,
+            maximoPeliculas: input.maximoPeliculas
+        }
+    );
     const analisis = analizarPlan(plan);
 
     res.json({ exito: true, tematica: input.generos.join(', '), plan, analisis });
