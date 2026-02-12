@@ -5,7 +5,8 @@ import { MovieCard } from '../components/MovieCard';
 import { MaratonPlanner } from '../components/MaratonPlanner';
 import { SearchBar } from '../components/SearchBar';
 import { ErrorMessage, EmptyState, MovieGridSkeleton } from '../components/Utilities';
-import { NavBar } from '../components/NavBar';
+// CORRECCIÓN AQUÍ ABAJO: Cambié 'NavBar' por 'Navbar' para que coincida con la etiqueta <Navbar /> de abajo
+import { Navbar } from '../components/NavBar';
 import { Footer } from '../components/Footer';
 import { useApi } from '../hooks';
 import styles from './Home.module.css';
@@ -55,6 +56,7 @@ export const Home = () => {
 
     return (
         <div className={styles.pageWrapper}>
+            {/* Ahora este componente coincide con el import de arriba */}
             <Navbar seccionActiva={seccionActiva} setSeccionActiva={setSeccionActiva} />
 
             <main className={styles.mainContent}>
