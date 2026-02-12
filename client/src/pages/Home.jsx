@@ -5,7 +5,7 @@ import { MovieCard } from '../components/MovieCard';
 import { MaratonPlanner } from '../components/MaratonPlanner';
 import { SearchBar } from '../components/SearchBar';
 import { ErrorMessage, EmptyState, MovieGridSkeleton } from '../components/Utilities';
-import { Navbar } from '../components/Navbar';
+import { NavBar } from '../components/NavBar';
 import { Footer } from '../components/Footer';
 import { useApi } from '../hooks';
 import styles from './Home.module.css';

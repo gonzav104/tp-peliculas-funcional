@@ -1,8 +1,8 @@
 import React from 'react';
 import { Clapperboard, Search, Target } from 'lucide-react';
-import styles from './Navbar.module.css';
+import styles from './NavBar.module.css';
 
-export const Navbar = ({ seccionActiva, setSeccionActiva }) => {
+export const NavBar = ({ seccionActiva, setSeccionActiva }) => {
     return (
         <header className={styles.header}>
             {/* Usamos headerContent para centrar */}
