@@ -7,6 +7,11 @@ import { Loading, ErrorMessage, EmptyState, MovieGridSkeleton } from '../compone
 import { useApi } from '../hooks';
 import styles from './Home.module.css';
 
+// CAMBIO CLAVE: Definir la función FUERA del componente.
+// Al estar afuera, React sabe que esta función JAMÁS cambia,
+// garantizando que useApi se ejecute exactamente una sola vez.
+const fetchPopularesStatic = () => obtenerPeliculasEnriquecidas(12);
+
 export const Home = () => {
     const [seccionActiva, setSeccionActiva] = useState('descubrir');
 
@@ -16,19 +21,13 @@ export const Home = () => {
     const [isSearching, setIsSearching] = useState(false);
     const [searchError, setSearchError] = useState(null);
 
-    // 'useCallback' congela la función
-    // Esto evita que React piense que es una función nueva en cada render y detiene el bucle infinito.
-    const fetchPopulares = useCallback(() => {
-        return obtenerPeliculasEnriquecidas(12);
-    }, []);
-
     // Pasamos la función memorizada al hook
     const {
         data,
         loading,
         error,
         execute: recargarPeliculas
-    } = useApi(fetchPopulares, true);
+    } = useApi(fetchPopularesStatic, true);
 
     const peliculas = data?.peliculas || [];
     const estadisticas = data?.estadisticas;

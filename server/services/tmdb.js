@@ -5,15 +5,19 @@ import {
     procesarPeliculasCalidad,
 } from '../utils/peliculas.js';
 import { Either } from '../utils/funcional.js';
+import { logger } from '../utils/logger.js'; // 1. Importamos Logger
+import {
+    TMDBListResponseSchema,
+    TMDBDetailResponseSchema
+} from '../schemas/tmdb_response.js'; // 2. Importamos Esquemas
 
 const API_KEY = process.env.TMDB_API_KEY;
 const BASE_URL = 'https://api.themoviedb.org/3';
 
-// CONFIGURACIÓN DE CACHÉ
 const tmdbCache = new NodeCache({ stdTTL: 3600, checkperiod: 600 });
 
-// Capa de acceso a TMDB
-const fetchTMDB = async (endpoint, params = {}) => {
+// Capa de acceso a TMDB mejorada
+const fetchTMDB = async (endpoint, params = {}, schema = null) => {
     try {
         const url = `${BASE_URL}${endpoint}`;
         const config = {
@@ -24,13 +28,29 @@ const fetchTMDB = async (endpoint, params = {}) => {
             }
         };
 
+        logger.debug(`Fetching TMDB: ${endpoint}`, params); // LOG
+
         const respuesta = await axios.get(url, config);
-        // @ts-ignore
+
+        // 3. Validación de estructura (Si se pasa un esquema)
+        if (schema) {
+            const validacion = schema.safeParse(respuesta.data);
+            if (!validacion.success) {
+                logger.error(`Error de validación en TMDB [${endpoint}]`, validacion.error.format());
+                // En producción, podrías decidir si fallar o retornar datos parciales.
+                // Aquí optamos por fallar para detectar cambios en la API rápido.
+                return Either.Left({
+                    mensaje: 'Estructura de respuesta inválida de TMDB',
+                    detalle: validacion.error.issues
+                });
+            }
+            return Either.Right(validacion.data);
+        }
+
         return Either.Right(respuesta.data);
 
     } catch (error) {
-        console.error(`Error TMDB [${endpoint}]:`, error.message);
-        // @ts-ignore
+        logger.error(`Error HTTP TMDB [${endpoint}]:`, error.message); // LOG
         return Either.Left({
             mensaje: 'Error al consultar TMDB',
             detalle: error.message,
@@ -39,13 +59,13 @@ const fetchTMDB = async (endpoint, params = {}) => {
     }
 };
 
-// Funciones de negocio
 export const obtenerPeliculasPopulares = async () => {
-    const resultado = await fetchTMDB('/movie/popular');
+    // Validamos que sea una lista
+    const resultado = await fetchTMDB('/movie/popular', {}, TMDBListResponseSchema);
 
     return resultado.fold(
         (error) => {
-            console.warn('Retornando lista vacía por error:', error.mensaje);
+            logger.warn('Retornando lista vacía por error en populares', error);
             return [];
         },
         (data) => procesarPeliculasEstandar(data.results || [])
@@ -53,7 +73,7 @@ export const obtenerPeliculasPopulares = async () => {
 };
 
 export const obtenerPeliculasCalidad = async () => {
-    const resultado = await fetchTMDB('/movie/top_rated', { page: 1 });
+    const resultado = await fetchTMDB('/movie/top_rated', { page: 1 }, TMDBListResponseSchema);
 
     return resultado.fold(
         () => [],
@@ -71,7 +91,7 @@ export const descubrirPeliculasPorDecada = async (decada) => {
         'sort_by': 'popularity.desc',
         'vote_average.gte': 6.0,
         'vote_count.gte': 100
-    });
+    }, TMDBListResponseSchema);
 
     return resultado.fold(
         () => [],
@@ -80,11 +100,9 @@ export const descubrirPeliculasPorDecada = async (decada) => {
 };
 
 export const buscarPeliculas = async (query) => {
-    if (!query || query.trim().length === 0) {
-        return [];
-    }
+    if (!query || query.trim().length === 0) return [];
 
-    const resultado = await fetchTMDB('/search/movie', { query });
+    const resultado = await fetchTMDB('/search/movie', { query }, TMDBListResponseSchema);
 
     return resultado.fold(
         () => [],
@@ -93,9 +111,10 @@ export const buscarPeliculas = async (query) => {
 };
 
 export const obtenerDetallesPelicula = async (id) => {
+    // Validamos con el esquema detallado
     const resultado = await fetchTMDB(`/movie/${id}`, {
         append_to_response: 'credits,videos'
-    });
+    }, TMDBDetailResponseSchema);
 
     return resultado.fold(
         () => null,
@@ -115,8 +134,6 @@ export const obtenerDetallesPelicula = async (id) => {
             fecha: data.release_date,
             duracion: data.runtime,
             generos: data.genres?.map(g => g.name) || [],
-
-            // CAMPOS DE DETALLE
             tagline: data.tagline,
             presupuesto: data.budget,
             ingresos: data.revenue,
@@ -124,7 +141,6 @@ export const obtenerDetallesPelicula = async (id) => {
             fecha_estreno: data.release_date,
             productoras: data.production_companies?.map(p => p.name) || [],
             paises: data.production_countries?.map(p => p.name) || [],
-
             reparto: data.credits?.cast?.slice(0, 10).map(actor => ({
                 nombre: actor.name,
                 personaje: actor.character,
@@ -132,33 +148,28 @@ export const obtenerDetallesPelicula = async (id) => {
                     ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`
                     : null
             })) || [],
-
             directores: data.credits?.crew
                 ?.filter(crew => crew.job === 'Director')
                 .map(d => d.name) || [],
-
             videos: data.videos?.results || [],
             fuente: 'tmdb'
         })
     );
 };
 
-// Implementacion de memoización
 const memoize = (fn) => {
     return async (...args) => {
         const key = JSON.stringify(args);
-
         const valorGuardado = tmdbCache.get(key);
         if (valorGuardado !== undefined) {
-            console.log(`⚡ Cache HIT: ${key}`);
+            logger.debug(`Cache HIT: ${key}`); // LOG
             return valorGuardado;
         }
 
         const resultado = await fn(...args);
 
-        console.log(`💾 Cache MISS: ${key}`);
+        logger.debug(`Cache MISS: ${key}`); // LOG
         tmdbCache.set(key, resultado);
-
         return resultado;
     };
 };

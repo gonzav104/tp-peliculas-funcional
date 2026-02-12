@@ -50,34 +50,58 @@ const filtrarPeliculasValidas = (peliculas) => {
     return peliculas.filter(esPeliculaValida);
 };
 
-// Algortimo de optimización recursiva
-const optimizarMaratonRecursivo = (peliculas, tiempoDisponible, seleccionadas = []) => {
+// Algortimo de optimización recursiva con memoización para evitar recalculos
+const optimizarMaratonRecursivo = (peliculas, tiempoDisponible, memo = {}) => {
+    // Caso base: Sin películas o sin tiempo
     if (peliculas.length === 0 || tiempoDisponible <= 0) {
-        return seleccionadas;
+        return [];
+    }
+
+    // Clave única para el estado actual (índice de película + tiempo restante)
+    // Como vamos reduciendo el array 'peliculas', usaremos su longitud como índice inverso
+    const key = `${peliculas.length}-${tiempoDisponible}`;
+
+    // Si ya calculamos esto antes, devolvemos el resultado guardado
+    if (memo[key]) {
+        return memo[key];
     }
 
     const [actual, ...resto] = peliculas;
 
+    let resultado;
+
+    // Opción A: Incluir la película
     if (actual.duracion <= tiempoDisponible) {
         const conActual = optimizarMaratonRecursivo(
             resto,
             tiempoDisponible - actual.duracion,
-            [...seleccionadas, actual]
+            memo
         );
 
         const sinActual = optimizarMaratonRecursivo(
             resto,
             tiempoDisponible,
-            seleccionadas
+            memo
         );
 
-        const sumaCon = conActual.reduce((acc, p) => acc + p.rating, 0);
-        const sumaSin = sinActual.reduce((acc, p) => acc + p.rating, 0);
+        // Comparamos valor total (Rating acumulado)
+        const ratingCon = conActual.reduce((acc, p) => acc + p.rating, 0) + actual.rating;
+        const ratingSin = sinActual.reduce((acc, p) => acc + p.rating, 0);
 
-        return sumaCon >= sumaSin ? conActual : sinActual;
+        // Elegimos el camino que dé más rating total
+        if (ratingCon >= ratingSin) {
+            resultado = [actual, ...conActual];
+        } else {
+            resultado = sinActual;
+        }
+    } else {
+        // Opción B: No entra, saltamos a la siguiente
+        resultado = optimizarMaratonRecursivo(resto, tiempoDisponible, memo);
     }
 
-    return optimizarMaratonRecursivo(resto, tiempoDisponible, seleccionadas);
+    // Guardamos en memoria antes de retornar
+    memo[key] = resultado;
+    return resultado;
 };
 
 const calcularValorPelicula = (pelicula) => {

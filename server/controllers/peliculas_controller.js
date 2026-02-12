@@ -31,15 +31,20 @@ import {
     maratonDecadaSchema
 } from '../schemas/peliculas.js';
 
-// Helper de validación
+// Nuevas importaciones
+import { LIMITES, ERRORES } from '../utils/constants.js';
+import { success, error } from '../utils/response.js';
+
+// === CONFIGURACIÓN ===
+// true = Ahorra cuota (pocas peticiones)
+// false = Producción (muchas peticiones, mejores resultados)
+const MODO_AHORRO = false;
+
+// Helper de validación local
 const validar = (schema, data, res) => {
     const resultado = schema.safeParse(data);
     if (!resultado.success) {
-        res.status(400).json({
-            exito: false,
-            error: "Datos inválidos",
-            detalles: resultado.error.format()
-        });
+        error(res, ERRORES.VALIDACION, 400, resultado.error.format());
         return null;
     }
     return resultado.data;
@@ -47,7 +52,7 @@ const validar = (schema, data, res) => {
 
 export const getPopulares = async (req, res) => {
     const peliculas = await obtenerPeliculasPopulares();
-    res.json({ exito: true, cantidad: peliculas.length, datos: peliculas });
+    success(res, { cantidad: peliculas.length, datos: peliculas });
 };
 
 export const getPopularesEnriquecidas = async (req, res) => {
@@ -56,12 +61,13 @@ export const getPopularesEnriquecidas = async (req, res) => {
 
     const peliculas = await obtenerPopularesEnriquecidas(input.limite);
     const estadisticas = analizarUnificacion(peliculas);
-    res.json({ exito: true, cantidad: peliculas.length, estadisticas, datos: peliculas });
+
+    success(res, { cantidad: peliculas.length, estadisticas, datos: peliculas });
 };
 
 export const getMejorCalificadas = async (req, res) => {
     const peliculas = await obtenerPeliculasCalidad();
-    res.json({ exito: true, cantidad: peliculas.length, datos: peliculas });
+    success(res, { cantidad: peliculas.length, datos: peliculas });
 };
 
 export const buscar = async (req, res) => {
@@ -69,7 +75,7 @@ export const buscar = async (req, res) => {
     if (!input) return;
 
     const resultados = await buscarPeliculasMemo(input.q);
-    res.json({ exito: true, termino: input.q, cantidad: resultados.length, datos: resultados });
+    success(res, { termino: input.q, cantidad: resultados.length, datos: resultados });
 };
 
 export const buscarEnriquecida = async (req, res) => {
@@ -78,7 +84,8 @@ export const buscarEnriquecida = async (req, res) => {
 
     const resultados = await buscarYEnriquecer(input.q, input.limite);
     const estadisticas = analizarUnificacion(resultados);
-    res.json({ exito: true, termino: input.q, cantidad: resultados.length, estadisticas, datos: resultados });
+
+    success(res, { termino: input.q, cantidad: resultados.length, estadisticas, datos: resultados });
 };
 
 // --- MARATONES ---
@@ -87,33 +94,41 @@ export const planearMaraton = async (req, res) => {
     const input = validar(maratonSchema, req.body, res);
     if (!input) return;
 
-    const peliculas = await obtenerPopularesEnriquecidas(10);
+    // Lógica dinámica según modo
+    const cantidadAObtener = MODO_AHORRO ? 5 : 20;
+
+    const peliculas = await obtenerPopularesEnriquecidas(cantidadAObtener);
     const plan = planificarMaraton(peliculas, input.tiempo, {
         ratingMinimo: input.ratingMinimo,
         maximoPeliculas: input.maximoPeliculas
     });
 
     const analisis = analizarPlan(plan);
-    res.json({ exito: true, plan, analisis });
+    success(res, { plan, analisis });
 };
 
 export const planearMaratonTematico = async (req, res) => {
     const input = validar(maratonTematicoSchema, req.body, res);
     if (!input) return;
 
-    const peliculas = await obtenerPopularesEnriquecidas(50);
+    // Lógica dinámica según modo
+    const cantidadPeliculas = MODO_AHORRO ? LIMITES.MARATON_AHORRO : LIMITES.BUSQUEDA_PROD;
+
+    const peliculas = await obtenerPopularesEnriquecidas(cantidadPeliculas);
+
     const plan = planificarMaratonTematico(
         peliculas,
         input.tiempo,
         input.generos,
         {
-            ratingMinimo: input.ratingMinimo,
+            ratingMinimo: MODO_AHORRO ? 0 : input.ratingMinimo,
             maximoPeliculas: input.maximoPeliculas
         }
     );
+
     const analisis = analizarPlan(plan);
 
-    res.json({ exito: true, tematica: input.generos.join(', '), plan, analisis });
+    success(res, { tematica: input.generos.join(', '), plan, analisis });
 };
 
 export const planearMaratonDecada = async (req, res) => {
@@ -123,36 +138,36 @@ export const planearMaratonDecada = async (req, res) => {
     const peliculasClasicas = await descubrirPeliculasPorDecada(input.decada);
 
     if (peliculasClasicas.length === 0) {
-        return res.json({ exito: true, mensaje: "No se encontraron películas", plan: [] });
+        return success(res, { mensaje: ERRORES.NO_RESULTADOS, plan: [] });
     }
 
-    const peliculasEnriquecidas = await enriquecerListaPeliculas(peliculasClasicas.slice(0, 15));
+    const cantidadAEnriquecer = MODO_AHORRO ? LIMITES.MARATON_AHORRO : LIMITES.MARATON_PROD;
+    const peliculasEnriquecidas = await enriquecerListaPeliculas(peliculasClasicas.slice(0, cantidadAEnriquecer));
+
     const plan = planificarMaraton(peliculasEnriquecidas, input.tiempo);
     const analisis = analizarPlan(plan);
 
-    res.json({ exito: true, tematica: `Década de ${input.decada}s`, plan, analisis });
+    success(res, { tematica: `Década de ${input.decada}s`, plan, analisis });
 };
 
 export const getPresetsMaraton = (req, res) => {
-    res.json({ exito: true, presets: presetsMaraton });
+    success(res, { presets: presetsMaraton });
 };
 
 // --- UTILIDADES ---
 
 export const getTrailers = async (req, res) => {
     if (!req.query.peli) throw new Error("Falta parámetro peli");
-    // Al lanzar este error, Express 5 lo atrapa y lo manda a errorHandler.js
-
     const trailers = await buscarTrailersPelicula(req.query.peli);
-    res.json({ exito: true, datos: trailers });
+    success(res, { datos: trailers });
 };
 
 export const getVideoStats = async (req, res) => {
     if (!req.query.id) throw new Error("Falta parámetro id");
     const stats = await obtenerEstadisticasVideo(req.query.id);
-    res.json({ exito: true, datos: stats });
+    success(res, { datos: stats });
 };
 
 export const getEstado = (req, res) => {
-    res.json({ servicio: 'Pipeline Funcional', estado: 'OK' });
+    success(res, { servicio: 'Pipeline Funcional', estado: 'OK', modo: MODO_AHORRO ? 'Ahorro' : 'Producción' });
 };

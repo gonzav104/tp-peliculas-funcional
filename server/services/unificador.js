@@ -2,7 +2,7 @@
 
 import { obtenerDetallesPelicula } from './tmdb.js';
 import { buscarTrailerPelicula } from './youtube.js';
-
+import { logger } from '../utils/logger.js';
 
 // Tipo unificado de datos enriquecidos
 /**
@@ -37,11 +37,8 @@ import { buscarTrailerPelicula } from './youtube.js';
  * @returns {PeliculaEnriquecida}
  */
 const combinarFuentes = (datosTMDB, datosYouTube) => {
-    // Retornamos directamente con casting para evitar variable redundante
-    return /** @type {PeliculaEnriquecida} */ ({
+    return {
         ...datosTMDB,
-
-        // Enriquecimiento con YouTube
         trailer: datosYouTube ? {
             id: datosYouTube.id,
             titulo: datosYouTube.titulo,
@@ -50,22 +47,12 @@ const combinarFuentes = (datosTMDB, datosYouTube) => {
             thumbnail: datosYouTube.thumbnail,
             canal: datosYouTube.canal
         } : null,
-
-        // Metadata de unificación
         fuentes: datosYouTube ? ['tmdb', 'youtube'] : ['tmdb'],
         fechaUnificacion: new Date().toISOString(),
-
-        // Flag de completitud
         estaCompleta: datosYouTube !== null
-    });
+    };
 };
 
-/**
- * VALIDAR DATOS UNIFICADOS
- * Verifica que los campos críticos existan
- * PURA: Solo valida, no modifica
- * @param {PeliculaEnriquecida} pelicula
- */
 const esUnificacionValida = (pelicula) => {
     return Boolean(
         pelicula.id &&
@@ -75,150 +62,97 @@ const esUnificacionValida = (pelicula) => {
     );
 };
 
-// Operaciones de enriquecimiento
-/**
- * ENRIQUECER UNA PELÍCULA
- * Combina datos de TMDB y YouTube de forma concurrente
- *
- * @param {number} idPelicula - ID de TMDB
- * @returns {Promise<PeliculaEnriquecida|null>}
- */
 export const enriquecerPelicula = async (idPelicula) => {
     try {
-        // Obtener datos de TMDB
         const datosTMDB = await obtenerDetallesPelicula(idPelicula);
 
-        if (!datosTMDB) {
-            console.warn(`No se encontró película con ID ${idPelicula} en TMDB`);
-            return null;
+        // Validación crítica
+        if (!datosTMDB || !datosTMDB.titulo) return null;
+
+        let datosYouTube = null;
+
+        // 1. INTENTO GRATIS: Buscar si TMDB ya nos dio el video
+        const videoTMDB = datosTMDB.videos?.find(v =>
+            v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
+        );
+
+        if (videoTMDB) {
+            // Log limpio sin emojis
+            logger.debug(`Trailer encontrado en TMDB para "${datosTMDB.titulo}" (Ahorro de cuota)`);
+            datosYouTube = {
+                id: videoTMDB.key,
+                titulo: `Trailer: ${datosTMDB.titulo}`,
+                url: `https://www.youtube.com/watch?v=${videoTMDB.key}`,
+                urlEmbed: `https://www.youtube.com/embed/${videoTMDB.key}`,
+                thumbnail: `https://img.youtube.com/vi/${videoTMDB.key}/hqdefault.jpg`,
+                canal: 'TMDB Oficial'
+            };
+        } else {
+            // 2. SOLO SI NO HAY EN TMDB: Buscamos en YouTube
+            try {
+                const anio = datosTMDB.fecha ? parseInt(datosTMDB.fecha.split('-')[0]) : null;
+                datosYouTube = await buscarTrailerPelicula(datosTMDB.titulo, anio);
+            } catch (ytError) {
+                // Log de advertencia limpio
+                logger.warn(`YouTube fallo para "${datosTMDB.titulo}": ${ytError.message}`);
+            }
         }
 
-        // Extraer info para busqueda en YouTube
-        const anio = datosTMDB.fecha
-            ? parseInt(datosTMDB.fecha.split('-')[0])
-            : null;
-
-        // Buscar trailer
-        const datosYouTube = await buscarTrailerPelicula(datosTMDB.titulo, anio)
-            .catch(error => {
-                console.warn(`YouTube falló para "${datosTMDB.titulo}":`, error);
-                return null; // No romper el flujo si YouTube falla
-            });
-
-        // Combinar (función pura)
         const peliculaUnificada = combinarFuentes(datosTMDB, datosYouTube);
 
-        // Validar
-        if (!esUnificacionValida(peliculaUnificada)) {
-            console.error('Unificación inválida:', peliculaUnificada);
-            return null;
-        }
+        if (!esUnificacionValida(peliculaUnificada)) return null;
 
         return peliculaUnificada;
 
     } catch (error) {
-        console.error(`Error al enriquecer película ${idPelicula}:`, error);
+        logger.error(`Error al enriquecer pelicula ${idPelicula}:`, error.message);
         return null;
     }
 };
 
-/**
- * ENRIQUECER MÚLTIPLES PELÍCULAS (CONCURRENTE)
- * Procesa varias películas en paralelo usando Promise.all
- *
- * CONCEPTO CLAVE:
- * Promise.all actúa como un COMBINADOR FUNCIONAL:
- * Toma un array de Promises y retorna una Promise del array de resultados
- *
- * @param {Array<number>} idsPeliculas - Array de identificadores
- * @returns {Promise<Array<PeliculaEnriquecida>>}
- */
 export const enriquecerPeliculasLote = async (idsPeliculas) => {
-    console.log(`🔄 Enriqueciendo ${idsPeliculas.length} películas en paralelo...`);
+    logger.info(`Enriqueciendo ${idsPeliculas.length} peliculas en paralelo...`);
 
-    // Lanzar todas las peticiones en paralelo
     const promesas = idsPeliculas.map(id => enriquecerPelicula(id));
+    const resultadosRaw = await Promise.allSettled(promesas);
 
-    // Esperar a que todas terminen
-    const resultados = await Promise.all(promesas);
+    const peliculasValidas = resultadosRaw
+        .filter(r => r.status === 'fulfilled' && r.value !== null)
+        .map(r => r.value);
 
-    // Filtrar nulls (peliculas que fallaron)
-    const peliculasValidas = resultados.filter(p => p !== null);
+    const fallidos = resultadosRaw.filter(r => r.status === 'rejected').length;
+    if (fallidos > 0) logger.warn(`Hubo ${fallidos} errores en el procesamiento del lote.`);
 
-    console.log(`✅ ${peliculasValidas.length}/${idsPeliculas.length} películas enriquecidas exitosamente`);
+    logger.info(`${peliculasValidas.length}/${idsPeliculas.length} peliculas enriquecidas exitosamente`);
 
     return peliculasValidas;
 };
 
-/**
- * ENRIQUECER LISTA DE PELÍCULAS SIMPLES
- * Toma el output del pipeline básico y lo enriquece
- *
- * @param {Array<Object>} peliculasSimples - Output de TMDB básico
- * @returns {Promise<Array<PeliculaEnriquecida>>}
- */
 export const enriquecerListaPeliculas = async (peliculasSimples) => {
     if (!peliculasSimples || peliculasSimples.length === 0) {
         return [];
     }
-
-    // Extraer IDs
     const ids = peliculasSimples.map(p => p.id);
-
-    // Enriquecer en lote
     return await enriquecerPeliculasLote(ids);
 };
 
-// Pipelines completos
-/**
- * OBTENER PELÍCULAS POPULARES ENRIQUECIDAS
- * Pipeline completo: TMDB -> Enriquecer con YouTube
- *
- * @param {number} limite - Cantidad de películas
- * @returns {Promise<Array<PeliculaEnriquecida>>}
- */
 export const obtenerPopularesEnriquecidas = async (limite = 10) => {
-    // Importar aca para evitar dependencias circulares
     const { obtenerPeliculasPopulares } = await import('./tmdb.js');
-
     const peliculasBasicas = await obtenerPeliculasPopulares();
     const top = peliculasBasicas.slice(0, limite);
-
     return await enriquecerListaPeliculas(top);
 };
 
-/**
- * BUSCAR Y ENRIQUECER
- * Caso de uso: búsqueda del usuario con máximo detalle
- *
- * @param {string} termino - Término de búsqueda
- * @param {number} limite - Cantidad máxima
- * @returns {Promise<Array<PeliculaEnriquecida>>}
- */
 export const buscarYEnriquecer = async (termino, limite = 5) => {
     const { buscarPeliculas } = await import('./tmdb.js');
-
     const resultados = await buscarPeliculas(termino);
     const top = resultados.slice(0, limite);
-
     return await enriquecerListaPeliculas(top);
 };
 
-// Análisis de unificación
-/**
- * CALCULAR ESTADÍSTICAS DE UNIFICACIÓN
- * Analiza qué tan completa está la información
- * PURA: Solo calcula, no modifica
- *
- * @param {Array<PeliculaEnriquecida>} peliculas
- * @returns {Object} - Estadísticas
- */
 export const analizarUnificacion = (peliculas) => {
     const total = peliculas.length;
-
-    if (total === 0) {
-        return { total: 0, tasaExito: 0 };
-    }
+    if (total === 0) return { total: 0, tasaExito: 0 };
 
     const conTrailer = peliculas.filter(p => p.trailer !== null).length;
     const conDescripcion = peliculas.filter(p =>
