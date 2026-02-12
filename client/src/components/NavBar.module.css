@@ -1,0 +1,106 @@
+/* Navbar.module.css */
+
+/* 1. EL CONTENEDOR EXTERNO (Para que toque los bordes de la pantalla) */
+.header {
+    width: 100%;
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    /* Tus estilos originales: */
+    background-color: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 0.8rem 0; /* Padding vertical solamente */
+    box-shadow: var(--shadow-md);
+}
+
+/* 2. EL CONTENEDOR INTERNO (Para centrar el contenido) */
+.headerContent {
+    width: 100%;
+    max-width: 1200px; /* Tu ancho máximo */
+    margin: 0 auto;
+    padding: 0 1.5rem; /* Margen para que no pegue en móviles */
+    box-sizing: border-box;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* TUS ESTILOS DE LOGO */
+.logoGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.logoRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin: 0;
+    /* Tu gradiente original */
+    background: linear-gradient(to right, #fff, #94a3b8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.tagline {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 0;
+    margin-left: 2.2rem;
+}
+
+/* TUS ESTILOS DE NAVEGACIÓN */
+.nav {
+    display: flex;
+    gap: 0.5rem;
+    /* Tu fondo sutil original */
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 0.25rem;
+    border-radius: var(--radius-full);
+}
+
+.navBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: var(--radius-full);
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.navBtn:hover {
+    color: var(--text-primary);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Tu clase original para el botón activo */
+.navBtnActivo {
+    background-color: var(--accent);
+    color: white;
+    box-shadow: 0 2px 10px rgba(225, 29, 72, 0.3);
+}
+
+.navBtnActivo:hover {
+    background-color: var(--accent-hover);
+}
+
+/* RESPONSIVE (Mantiene tu lógica) */
+@media (max-width: 600px) {
+    .tagline { display: none; }
+    .navBtn span { display: none; } /* Solo iconos en móvil */
+    .headerContent { padding: 0 1rem; }
+}

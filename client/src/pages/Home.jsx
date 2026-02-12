@@ -1,26 +1,24 @@
 import React, { useState, useCallback } from 'react';
-import { Clapperboard, Search, Target, Film, BarChart2 } from 'lucide-react';
+import { LayoutGrid, Clapperboard, Target, Film } from 'lucide-react';
 import { obtenerPeliculasEnriquecidas, buscarPeliculasEnriquecidas } from '../services/apiClient';
 import { MovieCard } from '../components/MovieCard';
 import { MaratonPlanner } from '../components/MaratonPlanner';
 import { SearchBar } from '../components/SearchBar';
 import { ErrorMessage, EmptyState, MovieGridSkeleton } from '../components/Utilities';
+import { Navbar } from '../components/Navbar';
+import { Footer } from '../components/Footer';
 import { useApi } from '../hooks';
 import styles from './Home.module.css';
 
-// Función estática para evitar recreación en renders y loops infinitos
 const fetchPopularesStatic = () => obtenerPeliculasEnriquecidas(12);
 
 export const Home = () => {
     const [seccionActiva, setSeccionActiva] = useState('descubrir');
-
-    // Estados para la búsqueda
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [searchError, setSearchError] = useState(null);
 
-    // Hook personalizado para carga inicial
     const {
         data,
         loading,
@@ -31,16 +29,13 @@ export const Home = () => {
     const peliculas = data?.peliculas || [];
     const estadisticas = data?.estadisticas;
 
-    // Función de búsqueda optimizada
     const handleSearch = useCallback(async (query) => {
         setSearchQuery(query);
-
         if (!query || query.trim().length === 0) {
             setSearchResults([]);
             setSearchError(null);
             return;
         }
-
         try {
             setIsSearching(true);
             setSearchError(null);
@@ -54,131 +49,92 @@ export const Home = () => {
         }
     }, []);
 
-    // Lógica de visualización
     const peliculasAMostrar = searchQuery ? searchResults : peliculas;
     const cargando = searchQuery ? isSearching : loading;
     const errorActual = searchQuery ? searchError : error;
 
     return (
-        <div className={styles.container}>
-            {/* HEADER TIPO NAVBAR (Compacto y Sticky) */}
-            <header className={styles.header}>
-                <div className={styles.headerContent}>
-                    {/* Logotipo con Icono */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Clapperboard size={26} color="var(--accent)" />
-                        <h1 className={styles.logo}>CineFuncional</h1>
-                    </div>
-                    <p className={styles.tagline}>
-                        Procesamiento declarativo de datos
-                    </p>
-                </div>
+        <div className={styles.pageWrapper}>
+            <Navbar seccionActiva={seccionActiva} setSeccionActiva={setSeccionActiva} />
 
-                {/* NAVEGACIÓN */}
-                <nav className={styles.nav}>
-                    <button
-                        className={`${styles.navBtn} ${seccionActiva === 'descubrir' ? styles.navBtnActivo : ''}`}
-                        onClick={() => setSeccionActiva('descubrir')}
-                    >
-                        <Search size={18} /> Descubrir
-                    </button>
-                    <button
-                        className={`${styles.navBtn} ${seccionActiva === 'maraton' ? styles.navBtnActivo : ''}`}
-                        onClick={() => setSeccionActiva('maraton')}
-                    >
-                        <Target size={18} /> Planear Maratón
-                    </button>
-                </nav>
-            </header>
+            <main className={styles.mainContent}>
 
-            {/* CONTENIDO PRINCIPAL */}
-            <main className={styles.main}>
-                {/* SECCIÓN: DESCUBRIR */}
                 {seccionActiva === 'descubrir' && (
-                    <section className={styles.seccionDescubrir}>
-                        <div className={styles.seccionHeader}>
-                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                {searchQuery ? <Search size={24} /> : <Film size={24} />}
+                    <section className={styles.fadeIn}>
+
+                        {/* TITULO Y SUBTITULO */}
+                        <div className={styles.sectionHeader}>
+                            <h2>
+                                {/* Icono sutil en el título */}
+                                {!searchQuery && <Film className={styles.titleIcon} size={28} style={{marginRight: '10px'}} />}
                                 {searchQuery ? 'Resultados de Búsqueda' : 'Películas Populares'}
                             </h2>
-                            <p className={styles.seccionSubtitulo}>
+                            <p className={styles.sectionSub}>
                                 {searchQuery
                                     ? `Mostrando resultados para "${searchQuery}"`
                                     : 'Datos agregados de TMDB + YouTube mediante pipeline funcional'}
                             </p>
                         </div>
 
-                        <SearchBar onSearch={handleSearch} />
+                        {/* BUSCADOR (Envuelto para controlar ancho) */}
+                        <div className={styles.searchWrapper}>
+                            <SearchBar onSearch={handleSearch} />
+                        </div>
 
-                        {/* ESTADÍSTICAS (Solo visibles en populares) */}
+                        {/* ESTADÍSTICAS (Diseño Limpio) */}
                         {!searchQuery && estadisticas && (
-                            <div className={styles.estadisticas}>
-                                <div className={styles.stat}>
-                                    <span className={styles.statLabel}><Film size={16} /> Total:</span>
-                                    <span className={styles.statValue}>{estadisticas.total}</span>
+                            <div className={styles.statsContainer}>
+                                <div className={styles.statBadge}>
+                                    <LayoutGrid size={18} />
+                                    <span>Total: <strong>{estadisticas.total}</strong></span>
                                 </div>
-                                <div className={styles.stat}>
-                                    <span className={styles.statLabel}><BarChart2 size={16} /> Con Tráiler:</span>
-                                    <span className={styles.statValue}>{estadisticas.tasaTrailers}</span>
+                                <div className={styles.statBadge}>
+                                    <Clapperboard size={18} />
+                                    <span>Con Tráiler: <strong>{estadisticas.tasaTrailers}</strong></span>
                                 </div>
-                                <div className={styles.stat}>
-                                    <span className={styles.statLabel}><Target size={16} /> Completitud:</span>
-                                    <span className={styles.statValue}>{estadisticas.completitud}</span>
+                                <div className={styles.statBadge}>
+                                    <Target size={18} />
+                                    <span>Completitud: <strong>{estadisticas.completitud}</strong></span>
                                 </div>
                             </div>
                         )}
 
-                        {/* LOADING STATE */}
-                        {cargando && (
-                            <MovieGridSkeleton count={12} />
-                        )}
+                        {/* GRID / CARGA / ERROR */}
+                        {cargando && <MovieGridSkeleton count={12} />}
 
-                        {/* ERROR STATE */}
                         {errorActual && !cargando && (
                             <ErrorMessage
                                 error={errorActual}
-                                onRetry={searchQuery ? () => handleSearch(searchQuery) : recargarPeliculas}
+                                onRetry={recargarPeliculas}
                             />
                         )}
 
-                        {/* GRID DE PELÍCULAS */}
                         {!cargando && !errorActual && peliculasAMostrar.length > 0 && (
                             <div className={styles.movieGrid}>
-                                {peliculasAMostrar.map(pelicula => (
-                                    <MovieCard key={pelicula.id} pelicula={pelicula} />
+                                {peliculasAMostrar.map(p => (
+                                    <MovieCard key={p.id} pelicula={p} />
                                 ))}
                             </div>
                         )}
 
-                        {/* EMPTY STATE */}
                         {!cargando && !errorActual && peliculasAMostrar.length === 0 && (
                             <EmptyState
-                                icon={<Film size={48} color="var(--text-muted)" />}
-                                title={searchQuery ? 'No se encontraron resultados' : 'No se encontraron películas'}
-                                message={searchQuery
-                                    ? `No hay resultados para "${searchQuery}". Intenta con otro término.`
-                                    : 'Parece que hubo un problema al cargar el catálogo inicial.'}
-                                action={{
-                                    label: searchQuery ? 'Limpiar búsqueda' : 'Recargar',
-                                    onClick: searchQuery ? () => handleSearch('') : recargarPeliculas
-                                }}
+                                title="No se encontraron películas"
+                                message="Intenta con otro término."
+                                action={{ label: 'Recargar', onClick: recargarPeliculas }}
                             />
                         )}
                     </section>
                 )}
 
-                {/* SECCIÓN: MARATÓN */}
                 {seccionActiva === 'maraton' && (
-                    <section className={styles.seccionMaraton}>
+                    <section className={styles.fadeIn}>
                         <MaratonPlanner />
                     </section>
                 )}
             </main>
 
-            <footer className={styles.footer}>
-                <p>Pipeline Funcional | Programación Declarativa | UNSAdA 2026</p>
-                <p className={styles.footerTech}>React 19 • Node.js • TMDB API • YouTube API</p>
-            </footer>
+            <Footer />
         </div>
     );
 };

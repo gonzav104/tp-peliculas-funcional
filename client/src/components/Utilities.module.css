@@ -1,3 +1,5 @@
+/* client/src/components/Utilities.module.css */
+
 /* === SKELETONS (Carga) === */
 .skeletonGrid {
     display: grid;
@@ -15,7 +17,7 @@
     position: relative;
 }
 
-/* Efecto Shimmer (Brillo que pasa) */
+/* Efecto Shimmer */
 .skeletonCard::after {
     content: "";
     position: absolute;

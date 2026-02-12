@@ -1,169 +1,129 @@
-/* client/src/pages/Home.module.css */
+/* src/pages/Home.module.css */
 
-/* === HEADER TIPO NAVBAR (Compacto y Moderno) === */
-.header {
-    position: sticky; /* Se queda fijo arriba */
-    top: 0;
-    z-index: 50;
-    display: flex;
-    align-items: center;
-    justify-content: space-between; /* Separa Logo (Izq) y Menú (Der) */
-    padding: 0.75rem 2rem; /* Padding reducido drásticamente */
-    background-color: rgba(15, 23, 42, 0.85); /* Fondo semi-transparente */
-    backdrop-filter: blur(12px); /* Efecto cristal */
-    border-bottom: 1px solid var(--border-subtle);
-    height: 70px; /* Altura fija controlada */
-    transition: var(--transition);
-}
-
-.headerContent {
+/* Contenedor principal */
+.pageWrapper {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-}
-
-.logo {
-    font-size: 1.5rem; /* Un poco más pequeño para encajar */
-    font-weight: 800;
-    background: linear-gradient(90deg, #fff 0%, #cbd5e1 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin: 0;
-    letter-spacing: -0.5px;
-    line-height: 1;
-}
-
-.tagline {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    margin: 2px 0 0 0;
-    font-weight: 400;
-}
-
-/* Ocultamos el tagline en móviles para ahorrar espacio */
-@media (max-width: 768px) {
-    .tagline {
-        display: none;
-    }
-    .header {
-        padding: 0.75rem 1rem;
-    }
-}
-
-/* === NAVEGACIÓN === */
-.nav {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-.navBtn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem; /* Botones más compactos */
-    background: transparent;
-    border: 1px solid transparent;
-    color: var(--text-secondary);
-    font-weight: 500;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: var(--transition);
-    border-radius: var(--radius-full);
-}
-
-.navBtn:hover {
-    color: var(--text-primary);
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
-.navBtnActivo {
-    background-color: rgba(225, 29, 72, 0.1); /* Tinte rojo muy suave */
-    color: var(--accent);
-    border-color: rgba(225, 29, 72, 0.2);
-    font-weight: 600;
-}
-
-.navBtnActivo:hover {
-    background-color: rgba(225, 29, 72, 0.2);
-}
-
-/* === LAYOUT GENERAL === */
-.container {
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+    background-color: var(--bg-app);
 }
 
-.main {
+/* Contenido centrado */
+.mainContent {
     flex: 1;
     width: 100%;
     max-width: 1200px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 2rem 1.5rem;
+    box-sizing: border-box;
 }
 
-/* === SECCIONES === */
-.seccionHeader {
+/* Animación de entrada */
+.fadeIn {
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* === CABECERA DE SECCIÓN === */
+.sectionHeader {
     margin-bottom: 2rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
 }
 
-.seccionSubtitulo {
+.sectionHeader h2 {
+    font-size: 2rem; /* Tamaño profesional */
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* El icono al lado del título (opcional) */
+.titleIcon {
+    color: var(--text-primary);
+}
+
+.sectionSub {
     color: var(--text-secondary);
+    font-size: 1rem;
+    margin: 0;
+    font-weight: 400;
+    max-width: 600px; /* Evita que el texto sea una línea eterna */
+}
+
+/* === BUSCADOR  === */
+.searchWrapper {
+    width: 100%;
+    max-width: 600px; /* Ancho máximo elegante */
+    margin: 0 0 1.5rem 0; /* Alineado a la izquierda o auto para centro */
+}
+
+/* === ESTADÍSTICAS === */
+.statsContainer {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 2.5rem;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+/* Cada dato individual */
+.statBadge {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+
     font-size: 0.95rem;
+    color: var(--text-primary);
+    font-weight: 500;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+/* Iconos de las stats */
+.statBadge svg {
+    color: var(--text-muted);
 }
 
 /* === GRID DE PELÍCULAS === */
 .movieGrid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1.5rem;
-    padding-bottom: 4rem;
-}
-
-/* === ESTADÍSTICAS === */
-.estadisticas {
-    display: flex;
     gap: 2rem;
-    margin-bottom: 2rem;
-    padding: 1rem;
-    background-color: var(--bg-card);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-subtle);
-    flex-wrap: wrap;
 }
 
-.stat {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
+/* === RESPONSIVE === */
+@media (max-width: 640px) {
+    .mainContent {
+        padding: 1.5rem 1rem;
+    }
 
-.statValue {
-    font-weight: 700;
-    color: var(--text-primary);
-}
+    .sectionHeader h2 {
+        font-size: 1.75rem;
+    }
 
-/* === FOOTER === */
-.footer {
-    border-top: 1px solid var(--border-subtle);
-    padding: 2rem;
-    text-align: center;
-    margin-top: auto;
-    background-color: var(--bg-app);
-}
+    .searchWrapper {
+        max-width: 100%; /* En celular ocupa todo el ancho */
+    }
 
-.footer p {
-    margin: 0.5rem 0;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-}
+    .movieGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
 
-.footerTech {
-    color: var(--text-muted) !important;
-    font-size: 0.8rem !important;
-    font-family: monospace;
+    .statsContainer {
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
 }

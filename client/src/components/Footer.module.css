@@ -1,0 +1,29 @@
+/* Footer.module.css */
+
+.footer {
+    width: 100%;
+    /* Tus variables originales */
+    background-color: var(--bg-card);
+    border-top: 1px solid var(--border-subtle);
+    padding: 2rem 0;
+    margin-top: auto;
+    text-align: center;
+}
+
+.container {
+    padding: 0 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.footer p {
+    margin: 0.5rem 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.footerTech {
+    color: var(--text-muted) !important;
+    font-size: 0.8rem !important;
+    font-family: var(--font-mono); /* Tu fuente mono */
+}

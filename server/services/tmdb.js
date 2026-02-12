@@ -60,8 +60,10 @@ const fetchTMDB = async (endpoint, params = {}, schema = null) => {
 };
 
 export const obtenerPeliculasPopulares = async () => {
+    const randomPage = Math.floor(Math.random() * 5) + 1;
+    logger.info(`Fetching TMDB Populares (Page ${randomPage}) para variedad`);
     // Validamos que sea una lista
-    const resultado = await fetchTMDB('/movie/popular', {}, TMDBListResponseSchema);
+    const resultado = await fetchTMDB('/movie/popular', {page: randomPage}, TMDBListResponseSchema);
 
     return resultado.fold(
         (error) => {
