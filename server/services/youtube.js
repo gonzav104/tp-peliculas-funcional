@@ -53,7 +53,7 @@ const fetchYouTube = async (endpoint, params = {}) => {
         if (status !== 403) {
             console.error(`Error YouTube [${endpoint}]:`, error.message);
         } else {
-            console.warn(`⚠️ YouTube Quota Excedida [${endpoint}]`);
+            console.warn(`YouTube Quota Excedida [${endpoint}]`);
         }
 
         // @ts-ignore
@@ -61,7 +61,7 @@ const fetchYouTube = async (endpoint, params = {}) => {
             mensaje: 'Error al consultar YouTube',
             detalle: error.message,
             endpoint,
-            status: status // <--- IMPORTANTE: Pasamos el status
+            status: status
         });
     }
 };
@@ -150,7 +150,6 @@ export const buscarTrailersPelicula = async (tituloPelicula, limite = 3) => {
 
     return resultado.fold(
         (err) => {
-            // En plural, si hay error de cuota, podríamos devolver un array con el fallback
             if (err.status === 403) return [FALLBACK_VIDEO];
             return [];
         },

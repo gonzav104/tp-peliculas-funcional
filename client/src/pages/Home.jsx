@@ -1,15 +1,14 @@
 import React, { useState, useCallback } from 'react';
+import { Clapperboard, Search, Target, Film, BarChart2 } from 'lucide-react';
 import { obtenerPeliculasEnriquecidas, buscarPeliculasEnriquecidas } from '../services/apiClient';
 import { MovieCard } from '../components/MovieCard';
 import { MaratonPlanner } from '../components/MaratonPlanner';
 import { SearchBar } from '../components/SearchBar';
-import { Loading, ErrorMessage, EmptyState, MovieGridSkeleton } from '../components/Utilities';
+import { ErrorMessage, EmptyState, MovieGridSkeleton } from '../components/Utilities';
 import { useApi } from '../hooks';
 import styles from './Home.module.css';
 
-// CAMBIO CLAVE: Definir la función FUERA del componente.
-// Al estar afuera, React sabe que esta función JAMÁS cambia,
-// garantizando que useApi se ejecute exactamente una sola vez.
+// Función estática para evitar recreación en renders y loops infinitos
 const fetchPopularesStatic = () => obtenerPeliculasEnriquecidas(12);
 
 export const Home = () => {
@@ -21,7 +20,7 @@ export const Home = () => {
     const [isSearching, setIsSearching] = useState(false);
     const [searchError, setSearchError] = useState(null);
 
-    // Pasamos la función memorizada al hook
+    // Hook personalizado para carga inicial
     const {
         data,
         loading,
@@ -32,7 +31,7 @@ export const Home = () => {
     const peliculas = data?.peliculas || [];
     const estadisticas = data?.estadisticas;
 
-    // Función de búsqueda
+    // Función de búsqueda optimizada
     const handleSearch = useCallback(async (query) => {
         setSearchQuery(query);
 
@@ -45,7 +44,6 @@ export const Home = () => {
         try {
             setIsSearching(true);
             setSearchError(null);
-            // Usamos la versión enriquecida para que traiga trailers
             const response = await buscarPeliculasEnriquecidas(query, 20);
             setSearchResults(response.peliculas || []);
         } catch (err) {
@@ -63,12 +61,16 @@ export const Home = () => {
 
     return (
         <div className={styles.container}>
-            {/* HEADER */}
+            {/* HEADER TIPO NAVBAR (Compacto y Sticky) */}
             <header className={styles.header}>
                 <div className={styles.headerContent}>
-                    <h1 className={styles.logo}>🎬 CineFuncional</h1>
+                    {/* Logotipo con Icono */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Clapperboard size={26} color="var(--accent)" />
+                        <h1 className={styles.logo}>CineFuncional</h1>
+                    </div>
                     <p className={styles.tagline}>
-                        Procesamiento declarativo de datos cinematográficos
+                        Procesamiento declarativo de datos
                     </p>
                 </div>
 
@@ -78,13 +80,13 @@ export const Home = () => {
                         className={`${styles.navBtn} ${seccionActiva === 'descubrir' ? styles.navBtnActivo : ''}`}
                         onClick={() => setSeccionActiva('descubrir')}
                     >
-                        🔍 Descubrir
+                        <Search size={18} /> Descubrir
                     </button>
                     <button
                         className={`${styles.navBtn} ${seccionActiva === 'maraton' ? styles.navBtnActivo : ''}`}
                         onClick={() => setSeccionActiva('maraton')}
                     >
-                        🎯 Planear Maratón
+                        <Target size={18} /> Planear Maratón
                     </button>
                 </nav>
             </header>
@@ -95,7 +97,10 @@ export const Home = () => {
                 {seccionActiva === 'descubrir' && (
                     <section className={styles.seccionDescubrir}>
                         <div className={styles.seccionHeader}>
-                            <h2>{searchQuery ? '🔍 Resultados de Búsqueda' : 'Películas Populares (Enriquecidas)'}</h2>
+                            <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                {searchQuery ? <Search size={24} /> : <Film size={24} />}
+                                {searchQuery ? 'Resultados de Búsqueda' : 'Películas Populares'}
+                            </h2>
                             <p className={styles.seccionSubtitulo}>
                                 {searchQuery
                                     ? `Mostrando resultados para "${searchQuery}"`
@@ -103,33 +108,32 @@ export const Home = () => {
                             </p>
                         </div>
 
-
                         <SearchBar onSearch={handleSearch} />
 
-                        {/* ESTADÍSTICAS */}
+                        {/* ESTADÍSTICAS (Solo visibles en populares) */}
                         {!searchQuery && estadisticas && (
                             <div className={styles.estadisticas}>
                                 <div className={styles.stat}>
-                                    <span className={styles.statLabel}>Total:</span>
+                                    <span className={styles.statLabel}><Film size={16} /> Total:</span>
                                     <span className={styles.statValue}>{estadisticas.total}</span>
                                 </div>
                                 <div className={styles.stat}>
-                                    <span className={styles.statLabel}>Con Tráiler:</span>
+                                    <span className={styles.statLabel}><BarChart2 size={16} /> Con Tráiler:</span>
                                     <span className={styles.statValue}>{estadisticas.tasaTrailers}</span>
                                 </div>
                                 <div className={styles.stat}>
-                                    <span className={styles.statLabel}>Completitud:</span>
+                                    <span className={styles.statLabel}><Target size={16} /> Completitud:</span>
                                     <span className={styles.statValue}>{estadisticas.completitud}</span>
                                 </div>
                             </div>
                         )}
 
-                        {/* LOADING */}
+                        {/* LOADING STATE */}
                         {cargando && (
                             <MovieGridSkeleton count={12} />
                         )}
 
-                        {/* ERROR */}
+                        {/* ERROR STATE */}
                         {errorActual && !cargando && (
                             <ErrorMessage
                                 error={errorActual}
@@ -146,16 +150,16 @@ export const Home = () => {
                             </div>
                         )}
 
-                        {/* VACÍO */}
+                        {/* EMPTY STATE */}
                         {!cargando && !errorActual && peliculasAMostrar.length === 0 && (
                             <EmptyState
-                                icon="🎬"
+                                icon={<Film size={48} color="var(--text-muted)" />}
                                 title={searchQuery ? 'No se encontraron resultados' : 'No se encontraron películas'}
                                 message={searchQuery
-                                    ? `No hay resultados para "${searchQuery}".`
-                                    : 'Intenta recargar la página.'}
+                                    ? `No hay resultados para "${searchQuery}". Intenta con otro término.`
+                                    : 'Parece que hubo un problema al cargar el catálogo inicial.'}
                                 action={{
-                                    label: searchQuery ? '🔄 Limpiar búsqueda' : '🔄 Reintentar',
+                                    label: searchQuery ? 'Limpiar búsqueda' : 'Recargar',
                                     onClick: searchQuery ? () => handleSearch('') : recargarPeliculas
                                 }}
                             />
@@ -172,7 +176,7 @@ export const Home = () => {
             </main>
 
             <footer className={styles.footer}>
-                <p>Pipeline Funcional | Programación Declarativa | UNSAdA 2024</p>
+                <p>Pipeline Funcional | Programación Declarativa | UNSAdA 2026</p>
                 <p className={styles.footerTech}>React 19 • Node.js • TMDB API • YouTube API</p>
             </footer>
         </div>

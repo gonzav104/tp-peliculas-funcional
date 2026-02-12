@@ -5,11 +5,11 @@ import {
     procesarPeliculasCalidad,
 } from '../utils/peliculas.js';
 import { Either } from '../utils/funcional.js';
-import { logger } from '../utils/logger.js'; // 1. Importamos Logger
+import { logger } from '../utils/logger.js';
 import {
     TMDBListResponseSchema,
     TMDBDetailResponseSchema
-} from '../schemas/tmdb_response.js'; // 2. Importamos Esquemas
+} from '../schemas/tmdb_response.js';
 
 const API_KEY = process.env.TMDB_API_KEY;
 const BASE_URL = 'https://api.themoviedb.org/3';
@@ -32,12 +32,12 @@ const fetchTMDB = async (endpoint, params = {}, schema = null) => {
 
         const respuesta = await axios.get(url, config);
 
-        // 3. Validación de estructura (Si se pasa un esquema)
+        // Validación de estructura
         if (schema) {
             const validacion = schema.safeParse(respuesta.data);
             if (!validacion.success) {
                 logger.error(`Error de validación en TMDB [${endpoint}]`, validacion.error.format());
-                // En producción, podrías decidir si fallar o retornar datos parciales.
+                // En producción, decidir si fallar o retornar datos parciales.
                 // Aquí optamos por fallar para detectar cambios en la API rápido.
                 return Either.Left({
                     mensaje: 'Estructura de respuesta inválida de TMDB',
@@ -50,7 +50,7 @@ const fetchTMDB = async (endpoint, params = {}, schema = null) => {
         return Either.Right(respuesta.data);
 
     } catch (error) {
-        logger.error(`Error HTTP TMDB [${endpoint}]:`, error.message); // LOG
+        logger.error(`Error HTTP TMDB [${endpoint}]:`, error.message);
         return Either.Left({
             mensaje: 'Error al consultar TMDB',
             detalle: error.message,
@@ -137,6 +137,7 @@ export const obtenerDetallesPelicula = async (id) => {
             tagline: data.tagline,
             presupuesto: data.budget,
             ingresos: data.revenue,
+            estado: data.status,
             idioma_original: data.original_language,
             fecha_estreno: data.release_date,
             productoras: data.production_companies?.map(p => p.name) || [],
@@ -162,13 +163,13 @@ const memoize = (fn) => {
         const key = JSON.stringify(args);
         const valorGuardado = tmdbCache.get(key);
         if (valorGuardado !== undefined) {
-            logger.debug(`Cache HIT: ${key}`); // LOG
+            logger.debug(`Cache HIT: ${key}`);
             return valorGuardado;
         }
 
         const resultado = await fn(...args);
 
-        logger.debug(`Cache MISS: ${key}`); // LOG
+        logger.debug(`Cache MISS: ${key}`);
         tmdbCache.set(key, resultado);
         return resultado;
     };

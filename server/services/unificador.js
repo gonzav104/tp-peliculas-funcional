@@ -1,41 +1,13 @@
-// Este módulo implementa el CORE del paradigma funcional aplicado al problema de integración de datos heterogéneos.
-
+// server/services/unificador.js
+import pLimit from 'p-limit';
 import { obtenerDetallesPelicula } from './tmdb.js';
 import { buscarTrailerPelicula } from './youtube.js';
 import { logger } from '../utils/logger.js';
 
-// Tipo unificado de datos enriquecidos
-/**
- * @typedef {Object} PeliculaEnriquecida
- * @property {number} id - ID de TMDB
- * @property {string} titulo
- * @property {string} [tituloOriginal]
- * @property {string} resumen
- * @property {string} imagen
- * @property {string} [imagenGrande]
- * @property {number} rating
- * @property {number} [cantidadVotos]
- * @property {string} fecha
- * @property {number} duracion
- * @property {Array<string>} generos
- * @property {Array<Object>} [reparto]
- * @property {Array<Object>} [videos]
- * @property {string} [fuente]
- * @property {Object|null} trailer - Datos de YouTube
- * @property {Array<string>} fuentes - ['tmdb', 'youtube']
- * @property {string} fechaUnificacion - Timestamp de procesamiento
- * @property {boolean} estaCompleta
- */
+// Configuración de concurrencia: Máximo 5 peticiones simultáneas
+const LIMIT_CONCURRENCY = 5;
+const limit = pLimit(LIMIT_CONCURRENCY);
 
-// Funciones puras de unificacion
-/**
- * COMBINAR DATOS DE TMDB Y YOUTUBE
- * Funcion pura que merge dos estructuras
- *
- * @param {Object} datosTMDB - Info de TMDB
- * @param {Object|null} datosYouTube - Info de YouTube
- * @returns {PeliculaEnriquecida}
- */
 const combinarFuentes = (datosTMDB, datosYouTube) => {
     return {
         ...datosTMDB,
@@ -66,18 +38,16 @@ export const enriquecerPelicula = async (idPelicula) => {
     try {
         const datosTMDB = await obtenerDetallesPelicula(idPelicula);
 
-        // Validación crítica
         if (!datosTMDB || !datosTMDB.titulo) return null;
 
         let datosYouTube = null;
 
-        // 1. INTENTO GRATIS: Buscar si TMDB ya nos dio el video
+        // INTENTO GRATIS: Buscar en TMDB
         const videoTMDB = datosTMDB.videos?.find(v =>
             v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
         );
 
         if (videoTMDB) {
-            // Log limpio sin emojis
             logger.debug(`Trailer encontrado en TMDB para "${datosTMDB.titulo}" (Ahorro de cuota)`);
             datosYouTube = {
                 id: videoTMDB.key,
@@ -88,12 +58,11 @@ export const enriquecerPelicula = async (idPelicula) => {
                 canal: 'TMDB Oficial'
             };
         } else {
-            // 2. SOLO SI NO HAY EN TMDB: Buscamos en YouTube
+            // SOLO SI NO HAY EN TMDB: Buscamos en YouTube
             try {
                 const anio = datosTMDB.fecha ? parseInt(datosTMDB.fecha.split('-')[0]) : null;
                 datosYouTube = await buscarTrailerPelicula(datosTMDB.titulo, anio);
             } catch (ytError) {
-                // Log de advertencia limpio
                 logger.warn(`YouTube fallo para "${datosTMDB.titulo}": ${ytError.message}`);
             }
         }
@@ -111,9 +80,11 @@ export const enriquecerPelicula = async (idPelicula) => {
 };
 
 export const enriquecerPeliculasLote = async (idsPeliculas) => {
-    logger.info(`Enriqueciendo ${idsPeliculas.length} peliculas en paralelo...`);
+    logger.info(`Enriqueciendo ${idsPeliculas.length} peliculas (max ${LIMIT_CONCURRENCY} concurrentes)...`);
 
-    const promesas = idsPeliculas.map(id => enriquecerPelicula(id));
+    // Envolvemos cada tarea con el limitador "limit(() => ...)"
+    const promesas = idsPeliculas.map(id => limit(() => enriquecerPelicula(id)));
+
     const resultadosRaw = await Promise.allSettled(promesas);
 
     const peliculasValidas = resultadosRaw
@@ -129,9 +100,7 @@ export const enriquecerPeliculasLote = async (idsPeliculas) => {
 };
 
 export const enriquecerListaPeliculas = async (peliculasSimples) => {
-    if (!peliculasSimples || peliculasSimples.length === 0) {
-        return [];
-    }
+    if (!peliculasSimples || peliculasSimples.length === 0) return [];
     const ids = peliculasSimples.map(p => p.id);
     return await enriquecerPeliculasLote(ids);
 };
@@ -153,23 +122,13 @@ export const buscarYEnriquecer = async (termino, limite = 5) => {
 export const analizarUnificacion = (peliculas) => {
     const total = peliculas.length;
     if (total === 0) return { total: 0, tasaExito: 0 };
-
     const conTrailer = peliculas.filter(p => p.trailer !== null).length;
-    const conDescripcion = peliculas.filter(p =>
-        p.resumen && p.resumen !== 'Sin descripción disponible'
-    ).length;
-    const conGeneros = peliculas.filter(p =>
-        p.generos && p.generos.length > 0
-    ).length;
-
+    const conDescripcion = peliculas.filter(p => p.resumen && p.resumen !== 'Sin descripción disponible').length;
+    const conGeneros = peliculas.filter(p => p.generos && p.generos.length > 0).length;
     return {
         total,
         conTrailer,
-        conDescripcion,
-        conGeneros,
         tasaTrailers: ((conTrailer / total) * 100).toFixed(1) + '%',
-        tasaDescripciones: ((conDescripcion / total) * 100).toFixed(1) + '%',
-        tasaGeneros: ((conGeneros / total) * 100).toFixed(1) + '%',
         completitud: (((conTrailer + conDescripcion + conGeneros) / (total * 3)) * 100).toFixed(1) + '%'
     };
 };

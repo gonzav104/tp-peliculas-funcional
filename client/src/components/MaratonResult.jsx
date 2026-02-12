@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { formatearTiempo, obtenerColorRating, exportarMaraton, copiarAlPortapapeles } from '../utils/helpers';
+import { formatearTiempo, obtenerColorRating} from '../utils/helpers';
 import { MovieCard } from './MovieCard';
 import styles from './MaratonResult.module.css';
 
@@ -10,7 +10,7 @@ export const MaratonResult = ({ resultado }) => {
     if (!plan || !plan.peliculas || plan.peliculas.length === 0) {
         return (
             <div className={styles.empty}>
-                <p>😔 No se encontraron películas que cumplan los criterios.</p>
+                <p> No se encontraron películas que cumplan los criterios.</p>
                 <p className={styles.hint}>Intenta ajustar el tiempo o los filtros.</p>
             </div>
         );
@@ -20,22 +20,11 @@ export const MaratonResult = ({ resultado }) => {
         return (plan.tiempoTotal / plan.tiempoDisponible) * 100;
     };
 
-    const handleExportar = async () => {
-        const texto = exportarMaraton(plan);
-        const exito = await copiarAlPortapapeles(texto);
-
-        if (exito) {
-            alert('¡Maratón copiado al portapapeles!');
-        } else {
-            alert('Error al copiar. Intenta de nuevo.');
-        }
-    };
-
     return (
         <div className={styles.container}>
             {/* HEADER */}
             <div className={styles.header}>
-                <h2>✨ Tu Maratón Está Listo</h2>
+                <h2> Tu Maratón Está Listo</h2>
                 {tematica && (
                     <p className={styles.tematica}>Temática: {tematica}</p>
                 )}
@@ -50,19 +39,19 @@ export const MaratonResult = ({ resultado }) => {
                 </div>
 
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon}>⏱️</div>
+                    <div className={styles.statIcon}></div>
                     <div className={styles.statValue}>{formatearTiempo(plan.tiempoTotal)}</div>
                     <div className={styles.statLabel}>Duración Total</div>
                 </div>
 
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon}>⭐</div>
+                    <div className={styles.statIcon}></div>
                     <div className={styles.statValue}>{plan.ratingPromedio.toFixed(1)}</div>
                     <div className={styles.statLabel}>Rating Promedio</div>
                 </div>
 
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon}>⏰</div>
+                    <div className={styles.statIcon}></div>
                     <div className={styles.statValue}>{formatearTiempo(plan.tiempoRestante)}</div>
                     <div className={styles.statLabel}>Tiempo Libre</div>
                 </div>
@@ -131,13 +120,13 @@ export const MaratonResult = ({ resultado }) => {
                                         className={styles.timelineRating}
                                         style={{ backgroundColor: obtenerColorRating(pelicula.rating) }}
                                     >
-                                        ★ {pelicula.rating.toFixed(1)}
+                                         {pelicula.rating.toFixed(1)}
                                     </span>
                                 </div>
 
                                 <div className={styles.timelineCardBody}>
                                     <div className={styles.timelineInfo}>
-                                        <span className={styles.infoIcon}>⏱️</span>
+                                        <span className={styles.infoIcon}></span>
                                         <span>{formatearTiempo(pelicula.duracion)}</span>
                                     </div>
 
@@ -152,7 +141,7 @@ export const MaratonResult = ({ resultado }) => {
                                     )}
 
                                     <div className={styles.clickHint}>
-                                        👁️ Click para ver detalles
+                                         Click para ver detalles
                                     </div>
                                 </div>
 
@@ -179,14 +168,6 @@ export const MaratonResult = ({ resultado }) => {
                 <p>{plan.descripcion}</p>
             </div>
 
-            {/* BOTÓN DE EXPORTAR */}
-            <button
-                className={styles.btnExportar}
-                onClick={handleExportar}
-            >
-                📋 Copiar al Portapapeles
-            </button>
-
             {/* MODAL DE DETALLES */}
             {peliculaSeleccionada && (
                 <div style={{ display: 'none' }}>
@@ -200,7 +181,7 @@ export const MaratonResult = ({ resultado }) => {
                             className={styles.closeBtn}
                             onClick={() => setPeliculaSeleccionada(null)}
                         >
-                            ✕
+
                         </button>
                         <MovieCard pelicula={peliculaSeleccionada} />
                     </div>

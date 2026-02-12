@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
-import { useDebounce } from '../hooks';
+import { Search, X } from 'lucide-react';
 import styles from './SearchBar.module.css';
 
-export const SearchBar = ({ onSearch, loading }) => {
+export const SearchBar = ({ onSearch }) => {
     const [query, setQuery] = useState('');
-    const debouncedQuery = useDebounce(query, 500);
 
-    React.useEffect(() => {
-        if (debouncedQuery.trim().length >= 2) {
-            onSearch(debouncedQuery);
-        } else if (debouncedQuery.trim().length === 0) {
-            onSearch(''); // Reset search
-        }
-    }, [debouncedQuery, onSearch]);
+    const handleChange = (e) => {
+        const value = e.target.value;
+        setQuery(value);
+        onSearch(value);
+    };
 
     const handleClear = () => {
         setQuery('');
@@ -21,29 +18,29 @@ export const SearchBar = ({ onSearch, loading }) => {
 
     return (
         <div className={styles.searchContainer}>
-            <div className={styles.searchWrapper}>
-                <span className={styles.searchIcon}>🔍</span>
+            <div className={styles.inputWrapper}>
+                <Search className={styles.searchIcon} size={20} />
+
                 <input
                     type="text"
                     className={styles.searchInput}
-                    placeholder="Buscar películas por título..."
+                    placeholder="Buscar películas, actores, géneros..."
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={handleChange}
+                    aria-label="Buscar películas"
                 />
+
                 {query && (
                     <button
+                        type="button"
                         className={styles.clearButton}
                         onClick={handleClear}
-                        type="button"
+                        aria-label="Limpiar búsqueda"
                     >
-                        ✕
+                        <X size={16} />
                     </button>
                 )}
-                {loading && <span className={styles.searchLoading}>⏳</span>}
             </div>
-            {query.trim().length > 0 && query.trim().length < 2 && (
-                <p className={styles.searchHint}>Escribe al menos 2 caracteres</p>
-            )}
         </div>
     );
 };

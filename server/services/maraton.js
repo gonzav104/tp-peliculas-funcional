@@ -1,5 +1,7 @@
 // Algoritmo de maraton - optimizacion recurisiva y funciones puras
 
+import crypto from 'crypto';
+
 /**
  * @typedef {Object} Pelicula
  * @property {number} id
@@ -46,60 +48,43 @@ const esPeliculaValida = (pelicula) => {
 };
 
 const filtrarPeliculasValidas = (peliculas) => {
-    // @ts-ignore
     return peliculas.filter(esPeliculaValida);
 };
 
-// Algortimo de optimización recursiva con memoización para evitar recalculos
+// Generador de Hash para Memoización (Optimización)
+const generarHash = (peliculas, tiempo) => {
+    // Ordenamos IDs para asegurar consistencia (A,B es igual a B,A)
+    const ids = peliculas.map(p => p.id).sort().join(',');
+    return crypto.createHash('md5').update(`${ids}|${tiempo}`).digest('hex');
+};
+
+// Algoritmo con Memoización Robusta
 const optimizarMaratonRecursivo = (peliculas, tiempoDisponible, memo = {}) => {
-    // Caso base: Sin películas o sin tiempo
     if (peliculas.length === 0 || tiempoDisponible <= 0) {
         return [];
     }
 
-    // Clave única para el estado actual (índice de película + tiempo restante)
-    // Como vamos reduciendo el array 'peliculas', usaremos su longitud como índice inverso
-    const key = `${peliculas.length}-${tiempoDisponible}`;
-
-    // Si ya calculamos esto antes, devolvemos el resultado guardado
-    if (memo[key]) {
-        return memo[key];
-    }
+    const key = generarHash(peliculas, tiempoDisponible);
+    if (memo[key]) return memo[key];
 
     const [actual, ...resto] = peliculas;
-
     let resultado;
 
-    // Opción A: Incluir la película
-    if (actual.duracion <= tiempoDisponible) {
-        const conActual = optimizarMaratonRecursivo(
-            resto,
-            tiempoDisponible - actual.duracion,
-            memo
-        );
+    // Asumimos 120 min si no tiene duración, por seguridad
+    const duracionActual = actual.duracion || 120;
 
-        const sinActual = optimizarMaratonRecursivo(
-            resto,
-            tiempoDisponible,
-            memo
-        );
+    if (duracionActual <= tiempoDisponible) {
+        const conActual = optimizarMaratonRecursivo(resto, tiempoDisponible - duracionActual, memo);
+        const sinActual = optimizarMaratonRecursivo(resto, tiempoDisponible, memo);
 
-        // Comparamos valor total (Rating acumulado)
         const ratingCon = conActual.reduce((acc, p) => acc + p.rating, 0) + actual.rating;
         const ratingSin = sinActual.reduce((acc, p) => acc + p.rating, 0);
 
-        // Elegimos el camino que dé más rating total
-        if (ratingCon >= ratingSin) {
-            resultado = [actual, ...conActual];
-        } else {
-            resultado = sinActual;
-        }
+        resultado = ratingCon >= ratingSin ? [actual, ...conActual] : sinActual;
     } else {
-        // Opción B: No entra, saltamos a la siguiente
         resultado = optimizarMaratonRecursivo(resto, tiempoDisponible, memo);
     }
 
-    // Guardamos en memoria antes de retornar
     memo[key] = resultado;
     return resultado;
 };
@@ -109,22 +94,18 @@ const calcularValorPelicula = (pelicula) => {
 };
 
 const ordenarPorValor = (peliculas) => {
-    return [...peliculas].sort((a, b) =>
-        calcularValorPelicula(b) - calcularValorPelicula(a)
-    );
+    return [...peliculas].sort((a, b) => calcularValorPelicula(b) - calcularValorPelicula(a));
 };
 
-// Función principal de planificación de maratón
-export const planificarMaraton = (
-    peliculas,
-    tiempoDisponibleMinutos,
-    opciones = {}
-) => {
-    const {
-        ratingMinimo = 6.0,
-        maximoPeliculas = 10,
-        preferirRecientes = false
-    } = opciones;
+const generarDescripcion = (peliculas, tiempoTotal, ratingPromedio) => {
+    if (peliculas.length === 0) return 'No se encontraron películas compatibles con tus criterios.';
+    const titulos = peliculas.map(p => `"${p.titulo}"`).join(', ');
+    return `Maratón de ${peliculas.length} película(s) [${formatearTiempo(tiempoTotal)}] ` +
+        `con rating promedio de ${ratingPromedio.toFixed(1)}: ${titulos}`;
+};
+
+export const planificarMaraton = (peliculas, tiempoDisponibleMinutos, opciones = {}) => {
+    const { ratingMinimo = 6.0, maximoPeliculas = 10, preferirRecientes = false } = opciones;
 
     let candidatas = filtrarPeliculasValidas(peliculas);
     candidatas = candidatas.filter(p => p.rating >= ratingMinimo);
@@ -137,17 +118,15 @@ export const planificarMaraton = (
         });
     }
 
-    if (candidatas.length > maximoPeliculas) {
-        candidatas = candidatas.slice(0, maximoPeliculas);
-    }
-
     const ordenadas = ordenarPorValor(candidatas);
+    // Limitamos el input del algoritmo para evitar Stack Overflow en casos extremos
+    const candidatasFinales = ordenadas.slice(0, 60);
 
-    const seleccionadas = optimizarMaratonRecursivo(
-        ordenadas,
-        tiempoDisponibleMinutos,
-        []
-    );
+    let seleccionadas = optimizarMaratonRecursivo(candidatasFinales, tiempoDisponibleMinutos, {});
+
+    if (seleccionadas.length > maximoPeliculas) {
+        seleccionadas = seleccionadas.slice(0, maximoPeliculas);
+    }
 
     const tiempoTotal = calcularTiempoTotal(seleccionadas);
     const ratingPromedio = calcularRatingPromedio(seleccionadas);
@@ -163,21 +142,15 @@ export const planificarMaraton = (
     };
 };
 
-const generarDescripcion = (peliculas, tiempoTotal, ratingPromedio) => {
-    if (peliculas.length === 0) return 'No se encontraron películas compatibles.';
-    const titulos = peliculas.map(p => `"${p.titulo}"`).join(', ');
-    return `Maratón de ${peliculas.length} película(s) [${formatearTiempo(tiempoTotal)}] ` +
-        `con rating promedio de ${ratingPromedio.toFixed(1)}★: ${titulos}`;
-};
-
 export const planificarMaratonTematico = (peliculas, tiempo, generos, opciones = {}) => {
     const generosBuscados = generos.map(g => g.toLowerCase());
+
     const filtradas = peliculas.filter(p => {
         if (!p.generos || !Array.isArray(p.generos)) return false;
         return p.generos.some(g => generosBuscados.includes(g.toLowerCase()));
     });
+
     if (filtradas.length === 0) {
-        // Retornamos estructura vacía segura para evitar errores
         return {
             peliculas: [],
             tiempoTotal: 0,
@@ -185,9 +158,10 @@ export const planificarMaratonTematico = (peliculas, tiempo, generos, opciones =
             tiempoRestante: tiempo,
             ratingPromedio: 0,
             cantidadPeliculas: 0,
-            descripcion: "No se encontraron películas compatibles con los géneros seleccionados."
+            descripcion: `No pudimos encontrar películas de los géneros: ${generos.join(', ')}.`
         };
     }
+
     return planificarMaraton(filtradas, tiempo, opciones);
 };
 
@@ -200,7 +174,7 @@ export const presetsMaraton = {
 
 export const analizarPlan = (plan) => {
     const { tiempoTotal, tiempoDisponible, ratingPromedio, peliculas } = plan;
-    const eficiencia = (tiempoTotal / tiempoDisponible) * 100;
+    const eficiencia = tiempoDisponible > 0 ? (tiempoTotal / tiempoDisponible) * 100 : 0;
 
     return {
         eficienciaTemporal: `${eficiencia.toFixed(1)}%`,

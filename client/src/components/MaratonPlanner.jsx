@@ -123,7 +123,7 @@ export const MaratonPlanner = () => {
 
     return (
         <div className={styles.container}>
-            <h1 className={styles.titulo}>🎬 Planificador de Maratones</h1>
+            <h1 className={styles.titulo}> Planificador de Maratones</h1>
             <p className={styles.subtitulo}>
                 Optimiza tu tiempo con nuestros algoritmos de programación funcional
             </p>
@@ -134,19 +134,19 @@ export const MaratonPlanner = () => {
                     className={`${styles.tab} ${tabActiva === 'automatico' ? styles.tabActiva : ''}`}
                     onClick={() => setTabActiva('automatico')}
                 >
-                    🤖 Smart Mix
+                     Maratón Automático
                 </button>
                 <button
                     className={`${styles.tab} ${tabActiva === 'tematico' ? styles.tabActiva : ''}`}
                     onClick={() => setTabActiva('tematico')}
                 >
-                    🎭 Por Género
+                     Por Género
                 </button>
                 <button
                     className={`${styles.tab} ${tabActiva === 'decada' ? styles.tabActiva : ''}`}
                     onClick={() => setTabActiva('decada')}
                 >
-                    ⏰ Viaje en el Tiempo
+                     Viaje en el Tiempo
                 </button>
             </div>
 
@@ -209,7 +209,7 @@ export const MaratonPlanner = () => {
                         </div>
 
                         <button type="submit" className={styles.btnSubmit} disabled={loading}>
-                            {loading ? '🔄 Calculando...' : '🚀 Generar Maratón'}
+                            {loading ? 'Calculando...' : 'Generar Maratón'}
                         </button>
                     </form>
                 )}
@@ -273,7 +273,7 @@ export const MaratonPlanner = () => {
                         </div>
 
                         <button type="submit" className={styles.btnSubmit} disabled={loading}>
-                            {loading ? '🔄 Calculando...' : '🎬 Generar Maratón'}
+                            {loading ? 'Calculando...' : 'Generar Maratón'}
                         </button>
                     </form>
                 )}
@@ -337,7 +337,7 @@ export const MaratonPlanner = () => {
                         </div>
 
                         <button type="submit" className={styles.btnSubmit} disabled={loading}>
-                            {loading ? '🔄 Calculando...' : '⏰ Generar Maratón'}
+                            {loading ? 'Calculando...' : 'Generar Maratón'}
                         </button>
                     </form>
                 )}
@@ -346,7 +346,7 @@ export const MaratonPlanner = () => {
             {/* ESTADOS DE ERROR Y LOADING */}
             {error && (
                 <div className={styles.error}>
-                    ❌ {error}
+                    {error}
                 </div>
             )}
 

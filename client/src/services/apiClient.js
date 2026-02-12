@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:3000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 /**
  * Cliente HTTP centralizado con manejo de errores
@@ -18,7 +18,7 @@ const apiRequest = async (endpoint, options = {}) => {
 
         const data = await response.json();
 
-        // El backend SIEMPRE envuelve las respuestas con { exito: true/false }
+        // El backend SIEMPRE envuelve las respuestas con exito: true/false
         if (!data.exito) {
             throw new Error(data.error || 'Error desconocido del servidor');
         }
