@@ -1,0 +1,68 @@
+# Pipeline de Integracion Continua y Despliegue Continuo
+# Se ejecuta en cada Pull Request dirigido a la rama main
+
+name: Pipeline CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Job 1: Pruebas unitarias del servidor y cliente
+  # ──────────────────────────────────────────────
+  pruebas:
+    name: Pruebas Unitarias
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+
+      - name: Instalar dependencias del servidor
+        run: npm ci
+        working-directory: server
+
+      - name: Instalar dependencias del cliente
+        run: npm ci
+        working-directory: client
+
+      - name: Ejecutar pruebas del servidor
+        run: npm test
+        working-directory: server
+
+      - name: Ejecutar pruebas del cliente
+        run: npm test
+        working-directory: client
+
+  # ──────────────────────────────────────────────
+  # Job 2: Analisis de seguridad con CodeQL
+  # ──────────────────────────────────────────────
+  seguridad:
+    name: "Analisis de Seguridad"
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Inicializar CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+
+      - name: Ejecutar analisis CodeQL
+        uses: github/codeql-action/analyze@v3

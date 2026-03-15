@@ -83,3 +83,41 @@ export const procesarPeliculasCalidad = pipe(
     filtrarConDescripcion,
     ordenarPorRating
 );
+
+// --- Normalización de proveedores de streaming ---
+
+/**
+ * Normaliza un proveedor de streaming de TMDB
+ * @param {{ provider_id: number, provider_name: string, logo_path: string }} proveedor
+ * @returns {{ id: number, nombre: string, logo: string }}
+ */
+export const normalizarProveedor = (proveedor) => ({
+    id: proveedor.provider_id,
+    nombre: proveedor.provider_name,
+    logo: `https://image.tmdb.org/t/p/original${proveedor.logo_path}`
+});
+
+/**
+ * Deduplica un array de proveedores por id (conserva la primera aparición)
+ * @param {Array} proveedores
+ * @returns {Array}
+ */
+const deduplicarPorId = (proveedores) =>
+    proveedores.reduce((acc, prov) =>
+        acc.some(p => p.id === prov.id) ? acc : [...acc, prov],
+    []);
+
+/**
+ * Normaliza los datos de streaming de una región de TMDB
+ * @param {Object} datosRegion - Objeto de región (ej: data.results.AR)
+ * @returns {{ suscripcion: Array, compra: Array }}
+ */
+export const normalizarStreamingTMDB = (datosRegion) => {
+    const suscripcionRaw = (datosRegion?.flatrate || []).map(normalizarProveedor);
+    const compraRaw = (datosRegion?.buy || []).map(normalizarProveedor);
+
+    return {
+        suscripcion: deduplicarPorId(suscripcionRaw),
+        compra: deduplicarPorId(compraRaw)
+    };
+};
