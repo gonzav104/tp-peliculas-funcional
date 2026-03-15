@@ -15,6 +15,8 @@ export const LIMITES = {
     RESULTADOS_POR_PAGINA: 20
 };
 
+export const STREAMING_REGIONES_FALLBACK = ['AR', 'ES', 'US'];
+
 export const ERRORES = {
     TMDB_CONNECTION: 'Error al conectar con el servicio de películas (TMDB)',
     YOUTUBE_QUOTA: 'Cuota de YouTube excedida o error de conexión',

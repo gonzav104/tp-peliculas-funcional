@@ -64,7 +64,7 @@ describe('Controller de Películas (Validación Zod & Manejo de Errores)', () =>
             expect(res.status).toHaveBeenCalledWith(400);
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
                 exito: false,
-                error: "Datos inválidos"
+                error: "Los datos enviados no tienen el formato correcto"
             }));
         });
 
@@ -138,14 +138,14 @@ describe('Controller de Películas (Validación Zod & Manejo de Errores)', () =>
             const res = mockRes();
 
             // Mockeamos éxito en los servicios necesarios
-            maratonService.planificarMaraton.mockReturnValue(['peli_planificada']);
+            const planMock = { peliculas: ['peli_planificada'], tiempoTotal: 110, ratingPromedio: 7.5, cantidadPeliculas: 1 };
+            maratonService.planificarMaraton.mockReturnValue(planMock);
             maratonService.analizarPlan.mockReturnValue({ duracion: 110 });
 
             await planearMaraton(req, res);
 
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
                 exito: true,
-                plan: ['peli_planificada']
                 plan: expect.objectContaining({ peliculas: ['peli_planificada'] })
             }));
         });

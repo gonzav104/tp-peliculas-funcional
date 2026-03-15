@@ -5,7 +5,8 @@ import { jest } from '@jest/globals';
 jest.unstable_mockModule('./tmdb.js', () => ({
     obtenerDetallesPelicula: jest.fn(),
     obtenerPeliculasPopulares: jest.fn(),
-    buscarPeliculas: jest.fn()
+    buscarPeliculas: jest.fn(),
+    obtenerProveedoresStreamingMemo: jest.fn()
 }));
 
 jest.unstable_mockModule('./youtube.js', () => ({
@@ -15,7 +16,7 @@ jest.unstable_mockModule('./youtube.js', () => ({
 // IMPORTAMOS LOS MÓDULOS
 const tmdbMock = await import('./tmdb.js');
 const youtubeMock = await import('./youtube.js');
-const { enriquecerPeliculasLote } = await import('./unificador.js');
+const { enriquecerPeliculasLote, enriquecerPelicula } = await import('./unificador.js');
 
 describe('Pruebas de Unificación con Concurrencia', () => {
 
@@ -75,5 +76,91 @@ describe('Pruebas de Unificación con Concurrencia', () => {
         // Solo debería devolver la película 1, porque la 2 falló (es null) y se filtró
         expect(resultados).toHaveLength(1);
         expect(resultados[0].titulo).toBe('Exito');
+    });
+});
+
+describe('Integración de Streaming', () => {
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('Debe incluir campo streaming en película enriquecida', async () => {
+        tmdbMock.obtenerDetallesPelicula.mockResolvedValue({
+            id: 1,
+            titulo: 'Pelicula Streaming',
+            imagen: 'img.jpg',
+            rating: 7.5,
+            fecha: '2024-01-01'
+        });
+
+        tmdbMock.obtenerProveedoresStreamingMemo.mockResolvedValue({
+            suscripcion: [{ id: 8, nombre: 'Netflix', logo: 'https://image.tmdb.org/t/p/original/netflix.png' }],
+            compra: []
+        });
+
+        youtubeMock.buscarTrailerPelicula.mockResolvedValue(null);
+
+        const resultado = await enriquecerPelicula(1);
+
+        expect(resultado).not.toBeNull();
+        expect(resultado).toHaveProperty('streaming');
+        expect(resultado.streaming.suscripcion).toHaveLength(1);
+        expect(resultado.streaming.suscripcion[0].nombre).toBe('Netflix');
+    });
+
+    test('Debe continuar si streaming falla (graceful degradation)', async () => {
+        tmdbMock.obtenerDetallesPelicula.mockResolvedValue({
+            id: 2,
+            titulo: 'Sin Streaming',
+            imagen: 'img.jpg',
+            rating: 8.0,
+            fecha: '2024-01-01'
+        });
+
+        // Streaming falla
+        tmdbMock.obtenerProveedoresStreamingMemo.mockRejectedValue(
+            new Error('Streaming API caída')
+        );
+
+        youtubeMock.buscarTrailerPelicula.mockResolvedValue(null);
+
+        const resultado = await enriquecerPelicula(2);
+
+        // La película debe retornarse igual, con streaming null
+        expect(resultado).not.toBeNull();
+        expect(resultado.titulo).toBe('Sin Streaming');
+        expect(resultado.streaming).toBeNull();
+    });
+
+    test('Debe agregar streaming a fuentes cuando hay datos', async () => {
+        tmdbMock.obtenerDetallesPelicula.mockResolvedValue({
+            id: 3,
+            titulo: 'Con Todo',
+            imagen: 'img.jpg',
+            rating: 9.0,
+            fecha: '2024-01-01'
+        });
+
+        tmdbMock.obtenerProveedoresStreamingMemo.mockResolvedValue({
+            suscripcion: [{ id: 337, nombre: 'Disney Plus', logo: 'https://image.tmdb.org/t/p/original/disney.png' }],
+            compra: []
+        });
+
+        youtubeMock.buscarTrailerPelicula.mockResolvedValue({
+            id: 'abc123',
+            titulo: 'Trailer',
+            url: 'https://youtube.com/watch?v=abc123',
+            urlEmbed: 'https://youtube.com/embed/abc123',
+            thumbnail: 'https://img.youtube.com/vi/abc123/hqdefault.jpg',
+            canal: 'Canal Test'
+        });
+
+        const resultado = await enriquecerPelicula(3);
+
+        expect(resultado.fuentes).toContain('tmdb');
+        expect(resultado.fuentes).toContain('youtube');
+        expect(resultado.fuentes).toContain('streaming');
+        expect(resultado.fuentes).toHaveLength(3);
     });
 });

@@ -1,6 +1,6 @@
 // server/services/unificador.js
 import pLimit from 'p-limit';
-import { obtenerDetallesPelicula } from './tmdb.js';
+import { obtenerDetallesPelicula, obtenerProveedoresStreamingMemo } from './tmdb.js';
 import { buscarTrailerPelicula } from './youtube.js';
 import { logger } from '../utils/logger.js';
 
@@ -8,7 +8,11 @@ import { logger } from '../utils/logger.js';
 const LIMIT_CONCURRENCY = 5;
 const limit = pLimit(LIMIT_CONCURRENCY);
 
-const combinarFuentes = (datosTMDB, datosYouTube) => {
+const combinarFuentes = (datosTMDB, datosYouTube, datosStreaming = null) => {
+    const fuentes = ['tmdb'];
+    if (datosYouTube) fuentes.push('youtube');
+    if (datosStreaming) fuentes.push('streaming');
+
     return {
         ...datosTMDB,
         trailer: datosYouTube ? {
@@ -19,7 +23,8 @@ const combinarFuentes = (datosTMDB, datosYouTube) => {
             thumbnail: datosYouTube.thumbnail,
             canal: datosYouTube.canal
         } : null,
-        fuentes: datosYouTube ? ['tmdb', 'youtube'] : ['tmdb'],
+        streaming: datosStreaming || null,
+        fuentes,
         fechaUnificacion: new Date().toISOString(),
         estaCompleta: datosYouTube !== null
     };
@@ -40,34 +45,44 @@ export const enriquecerPelicula = async (idPelicula) => {
 
         if (!datosTMDB || !datosTMDB.titulo) return null;
 
-        let datosYouTube = null;
+        // Lanzamos streaming y trailer en paralelo
+        const buscarTrailer = async () => {
+            // INTENTO GRATIS: Buscar en TMDB
+            const videoTMDB = datosTMDB.videos?.find(v =>
+                v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
+            );
 
-        // INTENTO GRATIS: Buscar en TMDB
-        const videoTMDB = datosTMDB.videos?.find(v =>
-            v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
-        );
+            if (videoTMDB) {
+                logger.debug(`Trailer encontrado en TMDB para "${datosTMDB.titulo}" (Ahorro de cuota)`);
+                return {
+                    id: videoTMDB.key,
+                    titulo: `Trailer: ${datosTMDB.titulo}`,
+                    url: `https://www.youtube.com/watch?v=${videoTMDB.key}`,
+                    urlEmbed: `https://www.youtube.com/embed/${videoTMDB.key}`,
+                    thumbnail: `https://img.youtube.com/vi/${videoTMDB.key}/hqdefault.jpg`,
+                    canal: 'TMDB Oficial'
+                };
+            }
 
-        if (videoTMDB) {
-            logger.debug(`Trailer encontrado en TMDB para "${datosTMDB.titulo}" (Ahorro de cuota)`);
-            datosYouTube = {
-                id: videoTMDB.key,
-                titulo: `Trailer: ${datosTMDB.titulo}`,
-                url: `https://www.youtube.com/watch?v=${videoTMDB.key}`,
-                urlEmbed: `https://www.youtube.com/embed/${videoTMDB.key}`,
-                thumbnail: `https://img.youtube.com/vi/${videoTMDB.key}/hqdefault.jpg`,
-                canal: 'TMDB Oficial'
-            };
-        } else {
             // SOLO SI NO HAY EN TMDB: Buscamos en YouTube
             try {
                 const anio = datosTMDB.fecha ? parseInt(datosTMDB.fecha.split('-')[0]) : null;
-                datosYouTube = await buscarTrailerPelicula(datosTMDB.titulo, anio);
+                return await buscarTrailerPelicula(datosTMDB.titulo, anio);
             } catch (ytError) {
                 logger.warn(`YouTube fallo para "${datosTMDB.titulo}": ${ytError.message}`);
+                return null;
             }
-        }
+        };
 
-        const peliculaUnificada = combinarFuentes(datosTMDB, datosYouTube);
+        const [trailerResult, streamingResult] = await Promise.allSettled([
+            buscarTrailer(),
+            obtenerProveedoresStreamingMemo(idPelicula)
+        ]);
+
+        const datosYouTube = trailerResult.status === 'fulfilled' ? trailerResult.value : null;
+        const datosStreaming = streamingResult.status === 'fulfilled' ? streamingResult.value : null;
+
+        const peliculaUnificada = combinarFuentes(datosTMDB, datosYouTube, datosStreaming);
 
         if (!esUnificacionValida(peliculaUnificada)) return null;
 

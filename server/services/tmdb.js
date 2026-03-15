@@ -3,9 +3,11 @@ import NodeCache from 'node-cache';
 import {
     procesarPeliculasEstandar,
     procesarPeliculasCalidad,
+    normalizarStreamingTMDB,
 } from '../utils/peliculas.js';
 import { Either } from '../utils/funcional.js';
 import { logger } from '../utils/logger.js';
+import { STREAMING_REGIONES_FALLBACK } from '../utils/constants.js';
 import {
     TMDBListResponseSchema,
     TMDBDetailResponseSchema
@@ -178,4 +180,27 @@ const memoize = (fn) => {
 };
 
 export const buscarPeliculasMemo = memoize(buscarPeliculas);
+
+export const obtenerProveedoresStreaming = async (idPelicula) => {
+    const resultado = await fetchTMDB(`/movie/${idPelicula}/watch/providers`);
+
+    return resultado.fold(
+        (error) => {
+            logger.warn(`Sin proveedores de streaming para película ${idPelicula}`, error);
+            return null;
+        },
+        (data) => {
+            const regiones = data.results || {};
+            const regionDisponible = STREAMING_REGIONES_FALLBACK.find(
+                (region) => regiones[region]
+            );
+
+            if (!regionDisponible) return null;
+
+            return normalizarStreamingTMDB(regiones[regionDisponible]);
+        }
+    );
+};
+
+export const obtenerProveedoresStreamingMemo = memoize(obtenerProveedoresStreaming);
 

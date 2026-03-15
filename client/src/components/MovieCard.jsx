@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Star, Calendar, Clock, Eye, Play, Info, VideoOff, DollarSign, Globe, Briefcase, Activity } from 'lucide-react';
+import { StreamingBadge } from './StreamingBadge';
 import styles from './MovieCard.module.css';
 
 export const MovieCard = ({ pelicula }) => {
@@ -92,6 +93,7 @@ export const MovieCard = ({ pelicula }) => {
                             </span>
                         )}
                     </div>
+                    <StreamingBadge streaming={pelicula.streaming} compacto />
                 </div>
             </article>
 
@@ -148,6 +150,8 @@ export const MovieCard = ({ pelicula }) => {
                                         ))}
                                     </div>
                                 )}
+
+                                <StreamingBadge streaming={pelicula.streaming} />
 
                                 <div className={styles.detailsSection}>
                                     <h3>Sinopsis</h3>
