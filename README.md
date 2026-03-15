@@ -1,877 +1,390 @@
-# 🎬 Pipeline Funcional para el Procesamiento de Datos de APIs
+# 🎬 CineFuncional — Pipeline Funcional de Películas
 
-> **Trabajo Final Integrador - Programación Declarativa**  
-> Universidad Nacional de San Antonio de Areco (UNSAdA)  
-> Ing. Emanuel Lazzari (2020)
+> **Trabajo Final Integrador — Programación Declarativa**  
+> Universidad Nacional de San Antonio de Areco (UNSAdA) — Ing. Emanuel Lazzari (2020)
+
+Aplicación full-stack que consume, transforma y enriquece datos cinematográficos de **múltiples APIs externas** aplicando principios de **programación funcional pura**: composición con `pipe`, transformaciones con `curry`, manejo de errores con la mónada `Either`, y optimización recursiva para planificación de maratones.
 
 ---
 
 ## 📋 Tabla de Contenidos
 
-- [Resumen Ejecutivo](#-resumen-ejecutivo)
-- [Fundamentación del Paradigma](#-fundamentación-del-paradigma)
-- [Arquitectura del Sistema](#-arquitectura-del-sistema)
-- [Conceptos Funcionales Implementados](#-conceptos-funcionales-implementados)
-- [Instalación y Configuración](#-instalación-y-configuración)
-- [Documentación de la API](#-documentación-de-la-api)
-- [Ejemplos de Uso](#-ejemplos-de-uso)
-- [Estructura del Proyecto](#-estructura-del-proyecto)
 - [Tecnologías Utilizadas](#-tecnologías-utilizadas)
-- [Estado del Arte](#-estado-del-arte)
-- [Conclusiones](#-conclusiones)
+- [Arquitectura del Proyecto](#-arquitectura-del-proyecto)
+- [Requisitos Previos](#-requisitos-previos)
+- [Instalación y Configuración](#-instalación-y-configuración)
+- [Cómo Levantar el Proyecto](#-cómo-levantar-el-proyecto)
+- [Testing](#-testing)
+- [Estructura de Carpetas](#-estructura-de-carpetas)
+- [Funcionalidades Principales](#-funcionalidades-principales)
+- [Endpoints de la API](#-endpoints-de-la-api)
+- [Conceptos Funcionales Implementados](#-conceptos-funcionales-implementados)
 
 ---
 
-## 🎯 Resumen Ejecutivo
+## 🛠 Tecnologías Utilizadas
 
-Este proyecto implementa un **pipeline funcional declarativo** para la agregación, transformación y optimización de datos cinematográficos provenientes de múltiples fuentes heterogéneas (TMDB y YouTube).
+### Backend
+| Tecnología | Uso |
+|---|---|
+| **Node.js 20** | Runtime de JavaScript |
+| **Express 5** | Framework web REST |
+| **Zod 4** | Validación de esquemas de respuesta (TMDB) |
+| **NodeCache** | Caché en memoria con TTL (1 hora) |
+| **p-limit** | Control de concurrencia (máx. 5 peticiones simultáneas) |
+| **Axios** | Cliente HTTP para APIs externas |
+| **Helmet** | Headers de seguridad HTTP |
+| **express-rate-limit** | Limitador de peticiones (100 req / 15 min) |
+| **Jest 30** | Framework de testing |
 
-### El Problema
+### Frontend
+| Tecnología | Uso |
+|---|---|
+| **React 19** | Biblioteca de interfaz de usuario |
+| **Vite 7** | Bundler y servidor de desarrollo |
+| **CSS Modules** | Estilos encapsulados por componente |
+| **Lucide React** | Iconografía SVG |
+| **Vitest 4** | Testing con jsdom |
+| **Testing Library** | Utilidades de testing para React |
 
-Las aplicaciones modernas consumen datos de servicios de terceros que entregan información en formatos crudos, voluminosos e inconsistentes. El desafío es procesarlos de manera **eficiente, confiable y mantenible**.
+### APIs Externas
+| API | Función |
+|---|---|
+| **TMDB** (The Movie Database) | Datos de películas, detalles, proveedores de streaming |
+| **YouTube Data API v3** | Búsqueda de tráilers oficiales |
 
-### La Solución
-
-Sistema **stateless** (sin base de datos) que procesa datos "en vuelo" (in-memory) mediante un pipeline funcional puro que:
-
-1. **Ingesta**: Consume API de TMDB (películas)
-2. **Enriquecimiento**: Integra datos de YouTube (tráilers)
-3. **Transformación**: Normaliza estructuras heterogéneas
-4. **Filtrado**: Aplica criterios de negocio declarativos
-5. **Optimización**: Genera planes de maratones mediante recursión pura
+### CI/CD
+| Herramienta | Función |
+|---|---|
+| **GitHub Actions** | Pipeline automático en cada Pull Request a `main` |
+| **CodeQL** | Análisis estático de seguridad del código |
 
 ---
 
-## 🧠 Fundamentación del Paradigma
+## 🏗 Arquitectura del Proyecto
 
-### ¿Por qué Programación Funcional?
+La aplicación sigue una arquitectura **cliente-servidor desacoplada**:
 
-#### El Contraste: Enfoque Imperativo (El Problema)
-
-```javascript
-// ❌ Código imperativo con efectos secundarios
-let peliculasFiltradas = [];
-for (let i = 0; i < peliculas.length; i++) {
-    if (peliculas[i].rating >= 7.0) {
-        peliculasFiltradas.push(peliculas[i]);
-    }
-}
-peliculasFiltradas.sort((a, b) => b.rating - a.rating);
+```
+┌─────────────────────────┐       ┌──────────────────────────────────┐
+│   FRONTEND (React/Vite) │◄─────►│     BACKEND (Node.js/Express)    │
+│   Puerto 5173           │  API  │     Puerto 3000                  │
+└─────────────────────────┘  REST └──────┬───────────┬───────────────┘
+                                         │           │
+                                    ┌────▼────┐ ┌────▼─────┐
+                                    │ TMDB API│ │YouTube API│
+                                    └─────────┘ └──────────┘
 ```
 
-**Problemas:**
-- Variables mutables (`let`, `.push()`)
-- Lógica imperativa (cómo hacer)
-- Difícil de testear y razonar
-- Propenso a errores de estado
+### Núcleo Funcional
 
-#### La Solución: Enfoque Funcional (La Elección)
+El backend implementa un **pipeline funcional puro** para el procesamiento de datos:
 
-```javascript
-// ✅ Código declarativo funcional
-const peliculasTop = pipe(
-    filter(p => p.rating >= 7.0),
-    sort((a, b) => b.rating - a.rating)
-)(peliculas);
+- **`pipe`** — Composición de funciones de izquierda a derecha
+- **`curry`** — Aplicación parcial para crear funciones especializadas
+- **`Either` (Left/Right)** — Manejo de errores sin try/catch anidados
+- **`map` / `filter` / `sort` currificados** — Transformaciones inmutables
+- **Memoización** — Caché funcional con transparencia referencial
+- **Recursión pura** — Algoritmo de optimización tipo knapsack para maratones
+
+### Flujo de Datos
+
 ```
-
-**Ventajas:**
-- Inmutabilidad garantizada
-- Declarativo (qué queremos, no cómo)
-- Funciones puras → fácil testing
-- Composición elegante
-
-### Los 3 Pilares del Proyecto
-
-#### 1. **Inmutabilidad**
-Los datos nunca se modifican. Cada transformación retorna una **nueva estructura**.
-
-```javascript
-// Las funciones de filtrado/mapeo NUNCA mutan el array original
-const peliculasLimpias = limpiarPeliculas(datosCrudos); // Nueva lista
-```
-
-#### 2. **Funciones Puras**
-Sin efectos secundarios. Misma entrada → misma salida, siempre.
-
-```javascript
-// Función pura: no depende de estado externo
-const calcularRatingPromedio = (peliculas) => {
-    const suma = peliculas.reduce((acc, p) => acc + p.rating, 0);
-    return suma / peliculas.length;
-};
-```
-
-#### 3. **Composición (Pipelines)**
-El flujo se **ensambla** componiendo funciones, no escribiendo bucles.
-
-```javascript
-// Declaramos el "flujo", no los "pasos"
-const procesarPeliculasCalidad = pipe(
-    limpiarPeliculas,        // Step 1: Normalizar estructura
-    filtrarConPoster,        // Step 2: Descartar sin imagen
-    filtrarPorRating(7.0),   // Step 3: Solo calidad alta
-    ordenarPorRating         // Step 4: Mejor primero
-);
+Datos Crudos TMDB
+       ↓
+  [limpiarPeliculas]         ← MAP: Normaliza estructura
+       ↓
+  [filtrarConPoster]         ← FILTER: Descarta sin imagen
+       ↓
+  [filtrarPorRating(7.0)]   ← FILTER: Solo alta calidad
+       ↓
+  [ordenarPorRating]         ← SORT: Mejor primero
+       ↓
+  Películas Procesadas
+       ↓
+  [enriquecerPelicula]      ← TMDB Detalles + YouTube Tráiler + Streaming
+       ↓
+  [combinarFuentes]          ← Función PURA de unificación
+       ↓
+  Película Enriquecida Completa
 ```
 
 ---
 
-## 🏗️ Arquitectura del Sistema
+## 📌 Requisitos Previos
 
-### Diagrama de Flujo de Datos
+- **Node.js** >= 20.x
+- **npm** >= 9.x
+- Una **API Key de TMDB** — [Obtener aquí](https://www.themoviedb.org/settings/api)
+- Una **API Key de YouTube Data API v3** *(opcional, el sistema tiene fallback)* — [Obtener aquí](https://console.cloud.google.com/)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    CAPA DE PRESENTACIÓN                     │
-│                    (Express REST API)                       │
-└────────────────┬────────────────────────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   CAPA DE CONTROLADORES                     │
-│          (peliculas_controller.js - Orquestación)           │
-└────────┬────────────────────────┬──────────────────┬────────┘
-         │                        │                  │
-         ▼                        ▼                  ▼
-┌────────────────┐      ┌──────────────────┐  ┌──────────────┐
-│  TMDB Service  │      │ YouTube Service  │  │   Maratón    │
-│   (Ingesta)    │◄────►│ (Enriquecimiento)│  │ (Optimizador)│
-└────────┬───────┘      └────────┬─────────┘  └──────┬───────┘
-         │                       │                    │
-         └───────────────┬───────┘                    │
-                         ▼                            │
-                ┌──────────────────┐                  │
-                │  UNIFICADOR      │◄─────────────────┘
-                │ (Combina Fuentes)│
-                └────────┬─────────┘
-                         │
-                         ▼
-                ┌──────────────────┐
-                │ UTILIDADES       │
-                │ (Funcional.js    │
-                │  Peliculas.js)   │
-                └──────────────────┘
+---
+
+## 📦 Instalación y Configuración
+
+### 1. Clonar el repositorio
+
+```bash
+git clone <url-del-repositorio>
+cd tp-peliculas-funcional
 ```
 
-### Flujo de un Request Típico
+### 2. Instalar todas las dependencias
+
+```bash
+# Desde la raíz: instala dependencias raíz + server + client
+npm install
+npm run install-all
+```
+
+O manualmente:
+
+```bash
+npm install                     # Raíz (concurrently)
+npm install --prefix server     # Dependencias del servidor
+npm install --prefix client     # Dependencias del cliente
+```
+
+### 3. Configurar variables de entorno
+
+Crear el archivo **`server/.env`** con el siguiente contenido:
+
+```env
+# === REQUERIDAS ===
+PORT=3000
+TMDB_API_KEY=tu_api_key_de_tmdb
+
+# === OPCIONALES ===
+YOUTUBE_API_KEY=tu_api_key_de_youtube
+NODE_ENV=development
+```
+
+> **Nota:** Si no se configura `YOUTUBE_API_KEY`, el sistema usa tráilers de TMDB como fuente primaria y muestra un video de respaldo cuando no encuentra resultado. Si falta `TMDB_API_KEY` o `PORT`, el servidor **no arranca** (validación obligatoria).
+
+**Variable del cliente** *(opcional)*: Si el backend corre en un puerto diferente, crear `client/.env`:
+
+```env
+VITE_API_URL=http://localhost:3000/api
+```
+
+Por defecto apunta a `http://localhost:3000/api`.
+
+---
+
+## 🚀 Cómo Levantar el Proyecto
+
+### Opción 1: Ambos servicios simultáneamente (recomendado)
+
+```bash
+npm run dev
+```
+
+Esto utiliza `concurrently` para levantar backend y frontend en paralelo.
+
+### Opción 2: Por separado
+
+**Backend:**
+```bash
+cd server
+npm run dev      # Con hot-reload (nodemon)
+# o
+npm start        # Sin hot-reload
+```
+> Servidor disponible en **http://localhost:3000**
+
+**Frontend:**
+```bash
+cd client
+npm run dev
+```
+> Aplicación disponible en **http://localhost:5173** (se abre automáticamente en el navegador)
+
+---
+
+## 🧪 Testing
+
+### Tests del Backend (Jest)
+
+```bash
+cd server
+npm test
+```
+
+Archivos de test:
+- `services/tmdb.test.js` — Tests del servicio TMDB
+- `services/unificador.test.js` — Tests del unificador de fuentes
+- `services/maraton.test.js` — Tests del algoritmo de maratón
+- `controllers/peliculas_controller.test.js` — Tests del controlador
+- `middlewares/errorHandler.test.js` — Tests del middleware de errores
+
+### Tests del Frontend (Vitest)
+
+```bash
+cd client
+npm test
+```
+
+Archivos de test:
+- `src/components/StreamingBadge.test.jsx` — Tests del componente de streaming
+
+### Pipeline CI/CD
+
+El proyecto cuenta con un pipeline de **GitHub Actions** (`ci_cd_pipeline.yml`) que se ejecuta en cada **Pull Request** a `main`:
+
+1. **Pruebas Unitarias** — Ejecuta `npm test` tanto en `server/` como en `client/` con Node.js 20
+2. **Análisis de Seguridad** — Ejecuta CodeQL para detectar vulnerabilidades en el código JavaScript
+
+---
+
+## 📁 Estructura de Carpetas
 
 ```
-Usuario → GET /api/peliculas/populares-enriquecidas?limite=5
-    │
-    ├─→ Controller: getPopularesEnriquecidas()
-    │
-    ├─→ TMDB Service: obtenerPeliculasPopulares()
-    │   └─→ Pipeline: procesarPeliculasEstandar()
-    │       └─→ limpiar → filtrar → ordenar
-    │
-    ├─→ Unificador: enriquecerListaPeliculas()
-    │   ├─→ Promise.all([...ids])
-    │   ├─→ TMDB: obtenerDetallesPelicula(id)
-    │   ├─→ YouTube: buscarTrailerPelicula(titulo)
-    │   └─→ combinarFuentes() [PURA]
-    │
-    └─→ Response: JSON con datos unificados
+tp-peliculas-funcional/
+├── .github/
+│   └── workflows/
+│       └── ci_cd_pipeline.yml      # Pipeline CI/CD (tests + CodeQL)
+├── client/                          # Frontend React
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Footer.jsx           # Pie de página
+│   │   │   ├── MaratonPlanner.jsx   # Planificador de maratones (3 modos)
+│   │   │   ├── MaratonResult.jsx    # Resultados del maratón
+│   │   │   ├── MovieCard.jsx        # Tarjeta de película con modal de detalles
+│   │   │   ├── NavBar.jsx           # Barra de navegación
+│   │   │   ├── SearchBar.jsx        # Buscador de películas
+│   │   │   ├── StreamingBadge.jsx   # Badges de plataformas de streaming
+│   │   │   └── Utilities.jsx        # Componentes utilitarios (skeleton, error, empty)
+│   │   ├── hooks/
+│   │   │   └── index.js             # Hooks: useApi, useForm, useDebounce, useLocalStorage
+│   │   ├── pages/
+│   │   │   └── Home.jsx             # Página principal (descubrir + maratón)
+│   │   ├── services/
+│   │   │   └── apiClient.js         # Cliente HTTP centralizado
+│   │   ├── utils/
+│   │   │   ├── constants.js         # Constantes del frontend
+│   │   │   ├── helpers.js           # Funciones auxiliares
+│   │   │   └── validators.js        # Validaciones
+│   │   ├── App.jsx                  # Componente raíz
+│   │   └── main.jsx                 # Punto de entrada React
+│   ├── package.json
+│   └── vite.config.js               # Configuración de Vite + Vitest
+├── server/                           # Backend Node.js
+│   ├── controllers/
+│   │   └── peliculas_controller.js   # Orquestación de servicios
+│   ├── middlewares/
+│   │   └── errorHandler.js           # Manejo centralizado de errores
+│   ├── routes/
+│   │   └── pelis_routes.js           # Definición de endpoints REST
+│   ├── schemas/
+│   │   ├── peliculas.js              # Esquemas Zod de entrada
+│   │   └── tmdb_response.js          # Esquemas Zod de respuesta TMDB
+│   ├── services/
+│   │   ├── tmdb.js                   # Servicio TMDB (ingesta + caché + Either)
+│   │   ├── youtube.js                # Servicio YouTube (tráilers + fallback)
+│   │   ├── unificador.js             # Combinador de fuentes (TMDB + YouTube + Streaming)
+│   │   └── maraton.js                # Algoritmo recursivo de optimización
+│   ├── utils/
+│   │   ├── funcional.js              # Herramientas FP: pipe, curry, map, filter, sort, Either
+│   │   ├── peliculas.js              # Pipelines de transformación de películas
+│   │   ├── constants.js              # Constantes y configuración
+│   │   ├── logger.js                 # Logger con niveles
+│   │   └── response.js              # Helpers de respuesta HTTP
+│   ├── app.js                        # Configuración de Express (CORS, Helmet, Rate Limit)
+│   ├── index.js                      # Punto de entrada (validación de env + listen)
+│   ├── .env                          # Variables de entorno (no versionado)
+│   └── package.json
+├── package.json                      # Scripts raíz (dev, install-all)
+└── README.md
+```
+
+---
+
+## ✨ Funcionalidades Principales
+
+### 🎥 Catálogo de Películas Populares
+- Visualización de películas populares obtenidas de TMDB
+- Datos enriquecidos con tráilers de YouTube y proveedores de streaming
+- Estadísticas de completitud del pipeline (tasa de tráilers, completitud general)
+
+### 🔍 Búsqueda de Películas
+- Búsqueda por texto con resultados enriquecidos (detalles + tráilers + streaming)
+- Debounce en el frontend para evitar peticiones excesivas
+
+### 🎞 Detalles Completos de Películas
+- Modal con información extendida: sinopsis, reparto, directores, géneros
+- Información técnica: presupuesto, recaudación, idioma original, productoras
+- Reproducción de tráiler embebido desde YouTube
+- Tagline de la película
+
+### 📺 Plataformas de Streaming
+- Badges visuales con logos de plataformas donde ver cada película
+- Diferenciación entre **suscripción** (Netflix, Disney+, etc.) y **compra** (Apple TV, Google Play, etc.)
+- Soporte para múltiples regiones con fallback: AR → ES → US
+
+### 🎯 Planificador de Maratones
+Tres modos de planificación que utilizan un **algoritmo recursivo de optimización** (problema de la mochila / knapsack):
+
+1. **Automático** — Maximiza rating acumulado dado un tiempo disponible y rating mínimo
+2. **Temático** — Filtra por géneros específicos (Acción, Drama, Sci-Fi, etc.)
+3. **Viaje en el Tiempo** — Películas de una década específica (1980s–2020s)
+
+Incluye análisis del plan: eficiencia temporal, tiempo libre, calidad general.
+
+### ⚡ Optimización y Seguridad
+- **Caché en memoria** con TTL de 1 hora (NodeCache) para reducir llamadas a APIs
+- **Memoización funcional** de búsquedas y proveedores de streaming
+- **Control de concurrencia** con p-limit (máx. 5 peticiones paralelas)
+- **Rate limiting** (100 peticiones cada 15 minutos por IP)
+- **Helmet** para headers de seguridad HTTP
+- **Validación de esquemas** con Zod en las respuestas de TMDB
+
+---
+
+## 📡 Endpoints de la API
+
+Base URL: `http://localhost:3000/api/peliculas`
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/` | Documentación interactiva de la API |
+| `GET` | `/populares` | Películas populares (pipeline básico) |
+| `GET` | `/populares-enriquecidas?limite=10` | Películas con tráilers y streaming |
+| `GET` | `/top-rated` | Películas mejor calificadas |
+| `GET` | `/buscar?q=inception` | Búsqueda básica |
+| `GET` | `/buscar-enriquecida?q=inception&limite=5` | Búsqueda con tráilers |
+| `POST` | `/maraton` | Planificar maratón optimizado |
+| `POST` | `/maraton-tematico` | Maratón filtrado por géneros |
+| `POST` | `/maraton-decada` | Maratón por década |
+| `GET` | `/maraton/presets` | Duraciones predefinidas |
+| `GET` | `/trailers` | Búsqueda de tráilers |
+| `GET` | `/video-stats` | Estadísticas de un video |
+| `GET` | `/estado` | Estado del servicio |
+
+### Ejemplo: Planificar Maratón
+
+```bash
+curl -X POST http://localhost:3000/api/peliculas/maraton \
+  -H "Content-Type: application/json" \
+  -d '{"tiempo": 240, "ratingMinimo": 7.0, "maximoPeliculas": 5}'
 ```
 
 ---
 
 ## 🔬 Conceptos Funcionales Implementados
 
-### 1. **Pipe (Composición de Funciones)**
-
-**Ubicación**: `server/utils/funcional.js`
-
-```javascript
-export const pipe = (...fns) =>
-    (valorInicial) =>
-        fns.reduce((valor, fn) => fn(valor), valorInicial);
-
-// Uso real en el proyecto:
-const procesarPeliculasCalidad = pipe(
-    limpiarPeliculas,
-    filtrarConPoster,
-    filtrarPorRatingMinimo(7.0),
-    filtrarConDescripcion,
-    ordenarPorRating
-);
-```
-
-**Ventaja**: Legibilidad. Leemos de arriba hacia abajo, como prosa.
+| Concepto | Ubicación | Uso en el Proyecto |
+|----------|-----------|-------------------|
+| **Pipe** (composición) | `server/utils/funcional.js` | Pipelines de procesamiento: `procesarPeliculasEstandar`, `procesarPeliculasCalidad` |
+| **Curry** (aplicación parcial) | `server/utils/funcional.js` | `map`, `filter`, `sort` currificados para crear funciones reutilizables |
+| **Either** (mónada) | `server/utils/funcional.js` | Manejo de errores en `tmdb.js` y `youtube.js` sin try/catch anidados |
+| **Map / Filter** inmutables | `server/utils/peliculas.js` | `limpiarPeliculas`, `filtrarConPoster`, `filtrarPorRatingMinimo` |
+| **Recursión pura** | `server/services/maraton.js` | Algoritmo de optimización de maratones (knapsack con memoización) |
+| **Memoización** | `server/services/tmdb.js` | `buscarPeliculasMemo`, `obtenerProveedoresStreamingMemo` |
+| **Promise.all** | `server/services/unificador.js` | Enriquecimiento paralelo de múltiples películas |
+| **Funciones puras** | Todo el proyecto | Transformaciones que no mutan datos ni dependen de estado externo |
 
 ---
 
-### 2. **Curry (Aplicación Parcial)**
+## 📄 Licencia
 
-**Ubicación**: `server/utils/funcional.js`
-
-```javascript
-export const curry = (fn) => {
-    const arity = fn.length;
-    return function curried(...args) {
-        if (args.length >= arity) {
-            return fn(...args);
-        }
-        return (...moreArgs) => curried(...args, ...moreArgs);
-    };
-};
-
-// Uso real:
-export const map = curry((fn, array) => array.map(fn));
-export const filter = curry((predicado, array) => array.filter(predicado));
-
-// Ahora podemos hacer:
-const filtrarPorRating = filter(p => p.rating >= 7.0);
-// filtrarPorRating es una función que espera el array
-```
-
-**Ventaja**: Reutilización. Creamos funciones especializadas sin repetir código.
-
----
-
-### 3. **Map / Filter (Transformación y Filtrado Funcional)**
-
-**Ubicación**: `server/utils/peliculas.js`
-
-```javascript
-// Transformación (MAP): convertir estructura A → estructura B
-const normalizarPeliculaTMDB = (peli) => ({
-    id: peli.id,
-    titulo: peli.title,
-    resumen: peli.overview || 'Sin descripción',
-    imagen: peli.poster_path 
-        ? `https://image.tmdb.org/t/p/w500${peli.poster_path}` 
-        : null,
-    rating: peli.vote_average || 0,
-    fecha: peli.release_date || 'Fecha desconocida'
-});
-
-export const limpiarPeliculas = map(normalizarPeliculaTMDB);
-
-// Filtrado (FILTER): descartar elementos que no cumplen criterio
-const tienePosterValido = (peli) =>
-    peli.imagen !== null && !peli.imagen.includes('null');
-
-export const filtrarConPoster = filter(tienePosterValido);
-```
-
-**Ventaja**: Inmutabilidad. El array original nunca se toca.
-
----
-
-### 4. **Either (Manejo de Errores Funcional)**
-
-**Ubicación**: `server/utils/funcional.js`
-
-```javascript
-export const Either = {
-    Left: (error) => ({
-        isLeft: true,
-        map: () => Either.Left(error),
-        fold: (leftFn, _) => leftFn(error)
-    }),
-    Right: (valor) => ({
-        isLeft: false,
-        map: (fn) => Either.Right(fn(valor)),
-        fold: (_, rightFn) => rightFn(valor)
-    })
-};
-
-// Uso real en TMDB Service:
-const fetchTMDB = async (endpoint, params) => {
-    try {
-        const respuesta = await axios.get(url, config);
-        return Either.Right(respuesta.data); // ✅ Éxito
-    } catch (error) {
-        return Either.Left({ mensaje: 'Error TMDB' }); // ❌ Error
-    }
-};
-
-// Consumo elegante:
-resultado.fold(
-    (error) => console.error(error),  // Caso fallo
-    (data) => procesarDatos(data)     // Caso éxito
-);
-```
-
-**Ventaja**: Sin `try-catch` anidados. Manejo explícito y declarativo de errores.
-
----
-
-### 5. **Recursión Pura (Algoritmo de Maratón)**
-
-**Ubicación**: `server/services/maraton.js`
-
-```javascript
-const optimizarMaratonRecursivo = (
-    peliculas, 
-    tiempoDisponible, 
-    seleccionadas = []
-) => {
-    // Caso base
-    if (peliculas.length === 0 || tiempoDisponible <= 0) {
-        return seleccionadas;
-    }
-
-    const [actual, ...resto] = peliculas;
-
-    if (actual.duracion <= tiempoDisponible) {
-        // Probar CON la película actual
-        const conActual = optimizarMaratonRecursivo(
-            resto,
-            tiempoDisponible - actual.duracion,
-            [...seleccionadas, actual]
-        );
-
-        // Probar SIN la película actual
-        const sinActual = optimizarMaratonRecursivo(
-            resto,
-            tiempoDisponible,
-            seleccionadas
-        );
-
-        // Retornar la mejor opción (máximo rating acumulado)
-        const sumaCon = conActual.reduce((acc, p) => acc + p.rating, 0);
-        const sumaSin = sinActual.reduce((acc, p) => acc + p.rating, 0);
-
-        return sumaCon >= sumaSin ? conActual : sinActual;
-    }
-
-    return optimizarMaratonRecursivo(resto, tiempoDisponible, seleccionadas);
-};
-```
-
-**Ventaja**: Sin bucles. Sin estado mutable. Solución elegante al problema de la mochila (knapsack).
-
----
-
-### 6. **Memoización (Optimización de Búsquedas)**
-
-**Ubicación**: `server/services/tmdb.js`
-
-```javascript
-const memoize = (fn) => {
-    const cache = new Map();
-    return async (...args) => {
-        const key = JSON.stringify(args);
-        if (cache.has(key)) {
-            return cache.get(key); // ✅ Cache hit
-        }
-        const resultado = await fn(...args);
-        cache.set(key, resultado);
-        return resultado;
-    };
-};
-
-export const buscarPeliculasMemo = memoize(buscarPeliculas);
-```
-
-**Ventaja**: Transparencia referencial. Función pura → resultado cacheable.
-
----
-
-### 7. **Promise.all (Paralelismo Funcional)**
-
-**Ubicación**: `server/services/unificador.js`
-
-```javascript
-export const enriquecerPeliculasLote = async (idsPeliculas) => {
-    // Lanzar TODAS las peticiones en paralelo
-    const promesas = idsPeliculas.map(id => enriquecerPelicula(id));
-    
-    // Esperar a que TODAS terminen
-    const resultados = await Promise.all(promesas);
-    
-    // Filtrar nulls (fallos)
-    return resultados.filter(p => p !== null);
-};
-```
-
-**Ventaja**: Eficiencia. 10 películas en ~2s vs ~20s secuencial.
-
----
-
-## 🛠️ Instalación y Configuración
-
-### Prerrequisitos
-
-- Node.js >= 18.x
-- npm >= 9.x
-- Cuentas en:
-  - [TMDB API](https://www.themoviedb.org/settings/api)
-  - [YouTube Data API v3](https://console.cloud.google.com/)
-
-### Paso 1: Clonar e Instalar
-
-```bash
-# Clonar repositorio
-git clone <repo-url>
-cd tp_peliculas_funcional
-
-# Instalar dependencias raíz (concurrently)
-npm install
-
-# Instalar dependencias del servidor
-npm run install-all
-```
-
-### Paso 2: Configurar Variables de Entorno
-
-Crear archivo `server/.env`:
-
-```env
-# Puerto del servidor
-PORT=3000
-NODE_ENV=development
-
-# TMDB API Key
-TMDB_API_KEY=tu_api_key_aqui
-
-# YouTube Data API v3 Key
-YOUTUBE_API_KEY=tu_api_key_aqui
-```
-
-### Paso 3: Ejecutar en Modo Desarrollo
-
-```bash
-# Desde la raíz del proyecto
-npm run dev
-
-# O solo el servidor:
-cd server
-npm run dev
-```
-
-El servidor estará disponible en `http://localhost:3000`
-
----
-
-## 📚 Documentación de la API
-
-### Endpoints Principales
-
-#### 🎬 **GET** `/api/peliculas/`
-Documentación interactiva de la API
-
-**Response:**
-```json
-{
-    "nombre": "API Pipeline Funcional de Películas",
-    "version": "1.0.0",
-    "endpoints": { ... },
-    "paradigma": {
-        "enfoque": "Programación Funcional",
-        "conceptos": [...]
-    }
-}
-```
-
----
-
-#### 🔥 **GET** `/api/peliculas/populares`
-Películas populares (pipeline básico)
-
-**Query Params:** Ninguno
-
-**Response:**
-```json
-{
-    "exito": true,
-    "cantidad": 20,
-    "datos": [
-        {
-            "id": 123,
-            "titulo": "Inception",
-            "resumen": "Dom Cobb es un ladrón...",
-            "imagen": "https://image.tmdb.org/t/p/w500/...",
-            "rating": 8.8,
-            "fecha": "2010-07-16",
-            "fuente": "tmdb"
-        }
-    ]
-}
-```
-
----
-
-#### ⭐ **GET** `/api/peliculas/populares-enriquecidas?limite=5`
-Películas con tráilers de YouTube (pipeline completo)
-
-**Query Params:**
-- `limite` (opcional): Número de películas (default: 5)
-
-**Response:**
-```json
-{
-    "exito": true,
-    "cantidad": 5,
-    "estadisticas": {
-        "total": 5,
-        "conTrailer": 4,
-        "tasaTrailers": "80.0%"
-    },
-    "datos": [
-        {
-            "id": 123,
-            "titulo": "Inception",
-            "resumen": "...",
-            "rating": 8.8,
-            "duracion": 148,
-            "generos": ["Action", "Sci-Fi"],
-            "trailer": {
-                "id": "YoHD9XEInc0",
-                "titulo": "Inception Official Trailer",
-                "url": "https://youtube.com/watch?v=...",
-                "thumbnail": "https://i.ytimg.com/...",
-                "canal": "Warner Bros"
-            },
-            "fuentes": ["tmdb", "youtube"],
-            "estaCompleta": true
-        }
-    ]
-}
-```
-
----
-
-#### 🔍 **GET** `/api/peliculas/buscar?q=matrix`
-Búsqueda básica de películas
-
-**Query Params:**
-- `q` (requerido): Término de búsqueda
-
-**Response:**
-```json
-{
-    "exito": true,
-    "termino": "matrix",
-    "cantidad": 15,
-    "datos": [...]
-}
-```
-
----
-
-#### 🎯 **POST** `/api/peliculas/maraton`
-Planificador de maratón optimizado (algoritmo recursivo)
-
-**Body:**
-```json
-{
-    "tiempo": 360,
-    "ratingMinimo": 7.0,
-    "maximoPeliculas": 10
-}
-```
-
-**Response:**
-```json
-{
-    "exito": true,
-    "plan": {
-        "peliculas": [
-            {
-                "titulo": "The Shawshank Redemption",
-                "duracion": 142,
-                "rating": 9.3
-            },
-            {
-                "titulo": "The Dark Knight",
-                "duracion": 152,
-                "rating": 9.0
-            }
-        ],
-        "tiempoTotal": 294,
-        "tiempoDisponible": 360,
-        "tiempoRestante": 66,
-        "ratingPromedio": 9.15,
-        "cantidadPeliculas": 2,
-        "descripcion": "Maratón de 2 película(s) [4h 54m] con rating promedio de 9.2★"
-    },
-    "analisis": {
-        "eficienciaTemporal": "81.7%",
-        "peliculasExcelentes": 2,
-        "tiempoLibre": "1h 6m",
-        "calidadGeneral": "Excelente"
-    }
-}
-```
-
----
-
-#### 🎭 **POST** `/api/peliculas/maraton-tematico`
-Maratón filtrado por géneros
-
-**Body:**
-```json
-{
-    "tiempo": 480,
-    "generos": ["Action", "Sci-Fi"]
-}
-```
-
----
-
-#### 📅 **POST** `/api/peliculas/maraton-decada`
-Maratón de películas clásicas por década
-
-**Body:**
-```json
-{
-    "tiempo": 360,
-    "decada": 1990
-}
-```
-
----
-
-## 💡 Ejemplos de Uso
-
-### Ejemplo 1: Pipeline Básico (Película Popular)
-
-```bash
-curl http://localhost:3000/api/peliculas/populares
-```
-
-**Flujo interno:**
-```
-1. TMDB API: GET /movie/popular
-2. Pipeline: limpiarPeliculas()
-   - Normaliza estructura TMDB → estructura propia
-3. Pipeline: filtrarConPoster()
-   - Descarta películas sin imagen
-4. Pipeline: ordenarPorRating()
-   - Ordena por calificación descendente
-5. Response: JSON con 20 películas limpias
-```
-
----
-
-### Ejemplo 2: Pipeline Completo (Enriquecimiento Multi-Fuente)
-
-```bash
-curl "http://localhost:3000/api/peliculas/populares-enriquecidas?limite=3"
-```
-
-**Flujo interno:**
-```
-1. TMDB: obtenerPeliculasPopulares() → [peli1, peli2, peli3]
-2. Unificador: enriquecerListaPeliculas([ids])
-   - Lanzar Promise.all([
-       enriquecerPelicula(id1),
-       enriquecerPelicula(id2),
-       enriquecerPelicula(id3)
-     ])
-3. Para cada ID (en paralelo):
-   - TMDB: obtenerDetallesPelicula(id)
-   - YouTube: buscarTrailerPelicula(titulo, año)
-   - combinarFuentes(tmdb, youtube) [FUNCIÓN PURA]
-4. Filtrar nulls
-5. Response: Array unificado con tráilers
-```
-
----
-
-### Ejemplo 3: Planificador de Maratón (Recursión)
-
-```bash
-curl -X POST http://localhost:3000/api/peliculas/maraton \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tiempo": 240,
-    "ratingMinimo": 8.0,
-    "maximoPeliculas": 5
-  }'
-```
-
-**Flujo interno:**
-```
-1. Obtener candidatas (películas populares enriquecidas)
-2. Filtrar por rating >= 8.0
-3. Ordenar por "valor" (rating/duracion)
-4. Algoritmo recursivo:
-   - Para cada película:
-     * Probar CON ella (restar duración)
-     * Probar SIN ella (mantener tiempo)
-     * Elegir rama con mayor rating acumulado
-5. Retornar plan óptimo
-```
-
----
-
-## 📁 Estructura del Proyecto
-
-```
-tp_peliculas_funcional/
-├── server/
-│   ├── controllers/
-│   │   └── peliculas_controller.js    # Orquestación de servicios
-│   ├── services/
-│   │   ├── tmdb.js                    # Ingesta de datos (TMDB)
-│   │   ├── youtube.js                 # Enriquecimiento (YouTube)
-│   │   ├── unificador.js              # Combina múltiples fuentes
-│   │   └── maraton.js                 # Optimizador recursivo
-│   ├── routes/
-│   │   └── pelis_routes.js            # Definición de endpoints
-│   ├── utils/
-│   │   ├── funcional.js               # Herramientas FP (pipe, curry, Either)
-│   │   └── peliculas.js               # Transformadores específicos
-│   ├── app.js                         # Configuración de Express
-│   ├── index.js                       # Punto de entrada
-│   ├── .env                           # Variables de entorno
-│   └── package.json
-├── docs/
-│   ├── Declarativa1 - Teoría.pdf      # Material teórico
-│   ├── Declarativa2.pdf               # Lógica de predicados
-│   ├── Declarativa3.pdf               # Normalización
-│   └── ...
-├── package.json                       # Scripts raíz
-└── README.md                          # Este archivo
-```
-
----
-
-## 🔧 Tecnologías Utilizadas
-
-### Backend
-- **Node.js 18+**: Runtime JavaScript
-- **Express 5**: Framework web minimalista
-- **Axios 1.13**: Cliente HTTP funcional
-
-### Paradigma
-- **Programación Funcional Pura**:
-  - Inmutabilidad
-  - Funciones puras
-  - Composición (pipe)
-  - Currying
-  - Recursión
-  - Either monad (manejo de errores)
-
-### APIs Externas
-- **TMDB API**: Base de datos cinematográfica
-- **YouTube Data API v3**: Búsqueda y metadata de vídeos
-
-### Herramientas de Desarrollo
-- **Nodemon**: Hot-reload en desarrollo
-- **Concurrently**: Ejecución paralela de scripts
-- **Dotenv**: Gestión de variables de entorno
-
----
-
-## 🌐 Estado del Arte
-
-### Soluciones Existentes
-
-#### 1. **IMDb Watchlist**
-- **Enfoque**: Imperativo, orientado a objetos
-- **Limitación**: No permite optimización automática de maratones
-- **Diferenciación**: Nuestro sistema usa **recursión pura** para encontrar combinaciones óptimas
-
-#### 2. **Trakt.tv**
-- **Enfoque**: Híbrido con base de datos relacional
-- **Limitación**: Requiere cuenta y sincronización
-- **Diferenciación**: Nuestro sistema es **stateless** y procesa datos en memoria
-
-#### 3. **JustWatch**
-- **Enfoque**: Agregador de plataformas de streaming
-- **Limitación**: No unifica datos de múltiples APIs en un solo modelo
-- **Diferenciación**: Implementamos **unificación declarativa** con validación de consistencia
-
-### Aportes Originales
-
-1. **Pipeline Funcional de Unificación**:
-   - Combina TMDB + YouTube de forma declarativa
-   - Manejo de errores con Either monad
-   - Procesamiento paralelo con `Promise.all`
-
-2. **Algoritmo de Optimización Recursiva**:
-   - Resuelve el problema de la mochila (knapsack) para maratones
-   - Sin bucles ni estado mutable
-   - Maximiza rating acumulado respetando restricción temporal
-
-3. **Arquitectura Stateless Pura**:
-   - Sin base de datos
-   - Datos procesados "en vuelo"
-   - Fácil escalabilidad horizontal
-
----
-
-## 📊 Diagramas Técnicos
-
-### Diagrama de Composición Funcional
-
-```
-Pipeline de Procesamiento de Películas:
-
-    Datos Crudos TMDB
-           ↓
-    [limpiarPeliculas]        ← MAP: Normaliza estructura
-           ↓
-    [filtrarConPoster]        ← FILTER: Descarta sin imagen
-           ↓
-    [filtrarPorRating(7.0)]   ← FILTER: Solo alta calidad
-           ↓
-    [ordenarPorRating]        ← SORT: Mejor primero
-           ↓
-    Películas Limpias
-
-
-Pipeline de Enriquecimiento:
-
-    [Película TMDB] → obtenerDetalles() → TMDB Details
-                              ↓
-                    buscarTrailer(titulo, año)
-                              ↓
-                        YouTube Trailer
-                              ↓
-                    combinarFuentes() [PURA]
-                              ↓
-                    Película Enriquecida
-```
-
----
-
-### Árbol de Recursión (Maratón)
-
-```
-optimizarMaraton([A,B,C], 300min)
-├── CON A (140min)
-│   └── optimizarMaraton([B,C], 160min)
-│       ├── CON B (80min)
-│       │   └── optimizarMaraton([C], 80min)
-│       │       └── CON C (70min) → [A,B,C] rating=25
-│       └── SIN B
-│           └── optimizarMaraton([C], 160min)
-│               └── CON C → [A,C] rating=19
-└── SIN A
-    └── optimizarMaraton([B,C], 300min)
-        └── CON B y CON C → [B,C] rating=16
-
-Resultado: [A,B,C] con rating acumulado 25 (mejor rama)
-```
-
----
-
-## 🎓 Conceptos de Programación Declarativa Aplicados
-
-### Unidad 1: Lógica Proposicional
-- **Aplicación**: Validaciones booleanas (`esPeliculaValida`, `pareceTrailerOficial`)
-- **Código**: `server/services/maraton.js`, `server/services/youtube.js`
-
-### Unidad 2: Lógica de Predicados
-- **Aplicación**: Filtros con cuantificadores (`filter`, `some`, `every`)
-- **Código**: `server/utils/peliculas.js`
-
-### Unidad 3: Normalización
-- **Aplicación**: Transformación de estructuras heterogéneas a formato unificado
-- **Código**: `server/services/unificador.js` (`combinarFuentes`)
-
-### Unidad 7: Programación Funcional (Scheme)
-- **Aplicación**: Todo el proyecto está basado en conceptos de LISP/Scheme:
-  - **map**: `limpiarPeliculas`
-  - **filter**: `filtrarConPoster`
-  - **fold/reduce**: `calcularRatingPromedio`
-  - **recursión**: `optimizarMaratonRecursivo`
-  - **composición**: `pipe`
-
----
+ISC
