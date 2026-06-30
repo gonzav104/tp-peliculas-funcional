@@ -8,36 +8,69 @@ import { logger } from '../utils/logger.js';
 const LIMIT_CONCURRENCY = 5;
 const limit = pLimit(LIMIT_CONCURRENCY);
 
-const combinarFuentes = (datosTMDB, datosYouTube, datosStreaming = null) => {
-    const fuentes = ['tmdb'];
-    if (datosYouTube) fuentes.push('youtube');
-    if (datosStreaming) fuentes.push('streaming');
+const obtenerValorSettled = (resultado) =>
+    resultado.status === 'fulfilled' ? resultado.value : null;
 
+const extraerTrailerDesdeTMDB = (datosTMDB) => {
+    const videoTMDB = datosTMDB.videos?.find(v =>
+        v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
+    );
+
+    if (!videoTMDB) return null;
+
+    logger.debug(`Trailer encontrado en TMDB para "${datosTMDB.titulo}" (Ahorro de cuota)`);
     return {
-        ...datosTMDB,
-        trailer: datosYouTube ? {
-            id: datosYouTube.id,
-            titulo: datosYouTube.titulo,
-            url: datosYouTube.url,
-            urlEmbed: datosYouTube.urlEmbed,
-            thumbnail: datosYouTube.thumbnail,
-            canal: datosYouTube.canal
-        } : null,
-        streaming: datosStreaming || null,
-        fuentes,
-        fechaUnificacion: new Date().toISOString(),
-        estaCompleta: datosYouTube !== null
+        id: videoTMDB.key,
+        titulo: `Trailer: ${datosTMDB.titulo}`,
+        url: `https://www.youtube.com/watch?v=${videoTMDB.key}`,
+        urlEmbed: `https://www.youtube.com/embed/${videoTMDB.key}`,
+        thumbnail: `https://img.youtube.com/vi/${videoTMDB.key}/hqdefault.jpg`,
+        canal: 'TMDB Oficial'
     };
 };
 
-const esUnificacionValida = (pelicula) => {
-    return Boolean(
+const buscarTrailerExterno = async (datosTMDB) => {
+    try {
+        const anio = datosTMDB.fecha ? parseInt(datosTMDB.fecha.split('-')[0]) : null;
+        return await buscarTrailerPelicula(datosTMDB.titulo, anio);
+    } catch (ytError) {
+        logger.warn(`YouTube fallo para "${datosTMDB.titulo}": ${ytError.message}`);
+        return null;
+    }
+};
+
+const obtenerTrailer = async (datosTMDB) => {
+    const trailerTMDB = extraerTrailerDesdeTMDB(datosTMDB);
+    return trailerTMDB ?? await buscarTrailerExterno(datosTMDB);
+};
+
+const combinarFuentes = (datosTMDB, datosYouTube, datosStreaming = null, fechaUnificacion = new Date().toISOString()) => ({
+    ...datosTMDB,
+    trailer: datosYouTube ? {
+        id: datosYouTube.id,
+        titulo: datosYouTube.titulo,
+        url: datosYouTube.url,
+        urlEmbed: datosYouTube.urlEmbed,
+        thumbnail: datosYouTube.thumbnail,
+        canal: datosYouTube.canal
+    } : null,
+    streaming: datosStreaming || null,
+    fuentes: [
+        'tmdb',
+        ...(datosYouTube ? ['youtube'] : []),
+        ...(datosStreaming ? ['streaming'] : [])
+    ],
+    fechaUnificacion,
+    estaCompleta: datosYouTube !== null
+});
+
+const esUnificacionValida = (pelicula) =>
+    Boolean(
         pelicula.id &&
         pelicula.titulo &&
         pelicula.imagen &&
         pelicula.rating !== undefined
     );
-};
 
 export const enriquecerPelicula = async (idPelicula) => {
     try {
@@ -46,48 +79,19 @@ export const enriquecerPelicula = async (idPelicula) => {
         if (!datosTMDB || !datosTMDB.titulo) return null;
 
         // Lanzamos streaming y trailer en paralelo
-        const buscarTrailer = async () => {
-            // INTENTO GRATIS: Buscar en TMDB
-            const videoTMDB = datosTMDB.videos?.find(v =>
-                v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
-            );
-
-            if (videoTMDB) {
-                logger.debug(`Trailer encontrado en TMDB para "${datosTMDB.titulo}" (Ahorro de cuota)`);
-                return {
-                    id: videoTMDB.key,
-                    titulo: `Trailer: ${datosTMDB.titulo}`,
-                    url: `https://www.youtube.com/watch?v=${videoTMDB.key}`,
-                    urlEmbed: `https://www.youtube.com/embed/${videoTMDB.key}`,
-                    thumbnail: `https://img.youtube.com/vi/${videoTMDB.key}/hqdefault.jpg`,
-                    canal: 'TMDB Oficial'
-                };
-            }
-
-            // SOLO SI NO HAY EN TMDB: Buscamos en YouTube
-            try {
-                const anio = datosTMDB.fecha ? parseInt(datosTMDB.fecha.split('-')[0]) : null;
-                return await buscarTrailerPelicula(datosTMDB.titulo, anio);
-            } catch (ytError) {
-                logger.warn(`YouTube fallo para "${datosTMDB.titulo}": ${ytError.message}`);
-                return null;
-            }
-        };
-
         const [trailerResult, streamingResult] = await Promise.allSettled([
-            buscarTrailer(),
+            obtenerTrailer(datosTMDB),
             obtenerProveedoresStreamingMemo(idPelicula)
         ]);
 
-        const datosYouTube = trailerResult.status === 'fulfilled' ? trailerResult.value : null;
-        const datosStreaming = streamingResult.status === 'fulfilled' ? streamingResult.value : null;
+        const datosYouTube = obtenerValorSettled(trailerResult);
+        const datosStreaming = obtenerValorSettled(streamingResult);
 
         const peliculaUnificada = combinarFuentes(datosTMDB, datosYouTube, datosStreaming);
 
         if (!esUnificacionValida(peliculaUnificada)) return null;
 
         return peliculaUnificada;
-
     } catch (error) {
         logger.error(`Error al enriquecer pelicula ${idPelicula}:`, error.message);
         return null;
@@ -97,9 +101,7 @@ export const enriquecerPelicula = async (idPelicula) => {
 export const enriquecerPeliculasLote = async (idsPeliculas) => {
     logger.info(`Enriqueciendo ${idsPeliculas.length} peliculas (max ${LIMIT_CONCURRENCY} concurrentes)...`);
 
-    // Envolvemos cada tarea con el limitador "limit(() => ...)"
     const promesas = idsPeliculas.map(id => limit(() => enriquecerPelicula(id)));
-
     const resultadosRaw = await Promise.allSettled(promesas);
 
     const peliculasValidas = resultadosRaw
@@ -137,9 +139,11 @@ export const buscarYEnriquecer = async (termino, limite = 5) => {
 export const analizarUnificacion = (peliculas) => {
     const total = peliculas.length;
     if (total === 0) return { total: 0, tasaExito: 0 };
+
     const conTrailer = peliculas.filter(p => p.trailer !== null).length;
     const conDescripcion = peliculas.filter(p => p.resumen && p.resumen !== 'Sin descripción disponible').length;
     const conGeneros = peliculas.filter(p => p.generos && p.generos.length > 0).length;
+
     return {
         total,
         conTrailer,

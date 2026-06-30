@@ -1,4 +1,4 @@
-// Algoritmo de maraton - optimizacion recurisiva y funciones puras
+// Algoritmo de maraton - optimizacion recursiva y funciones puras
 
 import crypto from 'crypto';
 
@@ -28,9 +28,8 @@ const calcularRatingPromedio = (peliculas) => {
     return suma / peliculas.length;
 };
 
-const calcularTiempoTotal = (peliculas) => {
-    return peliculas.reduce((acc, p) => acc + (p.duracion || 120), 0);
-};
+const calcularTiempoTotal = (peliculas) =>
+    peliculas.reduce((acc, p) => acc + (p.duracion || 120), 0);
 
 const formatearTiempo = (minutos) => {
     const horas = Math.floor(minutos / 60);
@@ -38,95 +37,104 @@ const formatearTiempo = (minutos) => {
     return `${horas}h ${mins}m`;
 };
 
-const esPeliculaValida = (pelicula) => {
-    return Boolean(
+const esPeliculaValida = (pelicula) =>
+    Boolean(
         pelicula.id &&
         pelicula.titulo &&
         pelicula.rating !== undefined &&
         pelicula.duracion && pelicula.duracion > 0
     );
-};
 
-const filtrarPeliculasValidas = (peliculas) => {
-    return peliculas.filter(esPeliculaValida);
-};
+const filtrarPeliculasValidas = (peliculas) => peliculas.filter(esPeliculaValida);
 
-// Generador de Hash para Memoización (Optimización)
-const generarHash = (peliculas, tiempo) => {
-    // Ordenamos IDs para asegurar consistencia (A,B es igual a B,A)
-    const ids = peliculas.map(p => p.id).sort().join(',');
-    return crypto.createHash('md5').update(`${ids}|${tiempo}`).digest('hex');
-};
+const calcularValorPelicula = (pelicula) =>
+    pelicula.rating / (pelicula.duracion || 120);
 
-// Algoritmo con Memoización Robusta
-const optimizarMaratonRecursivo = (peliculas, tiempoDisponible, memo = {}) => {
-    if (peliculas.length === 0 || tiempoDisponible <= 0) {
-        return [];
-    }
+const ordenarPorValor = (peliculas) =>
+    [...peliculas].sort((a, b) => calcularValorPelicula(b) - calcularValorPelicula(a));
 
-    const key = generarHash(peliculas, tiempoDisponible);
-    if (memo[key]) return memo[key];
+const ordenarPorFechaDesc = (peliculas) =>
+    [...peliculas].sort((a, b) => {
+        const fechaA = new Date(a.fecha || 0).getTime();
+        const fechaB = new Date(b.fecha || 0).getTime();
+        return fechaB - fechaA;
+    });
 
-    const [actual, ...resto] = peliculas;
-    let resultado;
-
-    // Asumimos 120 min si no tiene duración, por seguridad
-    const duracionActual = actual.duracion || 120;
-
-    if (duracionActual <= tiempoDisponible) {
-        const conActual = optimizarMaratonRecursivo(resto, tiempoDisponible - duracionActual, memo);
-        const sinActual = optimizarMaratonRecursivo(resto, tiempoDisponible, memo);
-
-        const ratingCon = conActual.reduce((acc, p) => acc + p.rating, 0) + actual.rating;
-        const ratingSin = sinActual.reduce((acc, p) => acc + p.rating, 0);
-
-        resultado = ratingCon >= ratingSin ? [actual, ...conActual] : sinActual;
-    } else {
-        resultado = optimizarMaratonRecursivo(resto, tiempoDisponible, memo);
-    }
-
-    memo[key] = resultado;
-    return resultado;
-};
-
-const calcularValorPelicula = (pelicula) => {
-    return pelicula.rating / (pelicula.duracion || 120);
-};
-
-const ordenarPorValor = (peliculas) => {
-    return [...peliculas].sort((a, b) => calcularValorPelicula(b) - calcularValorPelicula(a));
-};
+const limitarPeliculas = (peliculas, maximo) => peliculas.slice(0, maximo);
 
 const generarDescripcion = (peliculas, tiempoTotal, ratingPromedio) => {
-    if (peliculas.length === 0) return 'No se encontraron películas compatibles con tus criterios.';
+    if (peliculas.length === 0) {
+        return 'No se encontraron películas compatibles con tus criterios.';
+    }
+
     const titulos = peliculas.map(p => `"${p.titulo}"`).join(', ');
     return `Maratón de ${peliculas.length} película(s) [${formatearTiempo(tiempoTotal)}] ` +
         `con rating promedio de ${ratingPromedio.toFixed(1)}: ${titulos}`;
 };
 
+const generarHash = (peliculas, tiempo) => {
+    const ids = [...peliculas]
+        .map(p => p.id)
+        .sort((a, b) => a - b)
+        .join(',');
+
+    return crypto.createHash('md5').update(`${ids}|${tiempo}`).digest('hex');
+};
+
+const crearOptimizadorMaraton = () => {
+    const memo = new Map();
+
+    const optimizar = (peliculas, tiempoDisponible) => {
+        if (peliculas.length === 0 || tiempoDisponible <= 0) {
+            return [];
+        }
+
+        const key = generarHash(peliculas, tiempoDisponible);
+        if (memo.has(key)) return memo.get(key);
+
+        const [actual, ...resto] = peliculas;
+        const duracionActual = actual.duracion || 120;
+
+        const resultado = duracionActual <= tiempoDisponible
+            ? (() => {
+                const conActual = optimizar(resto, tiempoDisponible - duracionActual);
+                const sinActual = optimizar(resto, tiempoDisponible);
+
+                const ratingCon = conActual.reduce((acc, p) => acc + p.rating, 0) + actual.rating;
+                const ratingSin = sinActual.reduce((acc, p) => acc + p.rating, 0);
+
+                return ratingCon >= ratingSin ? [actual, ...conActual] : sinActual;
+            })()
+            : optimizar(resto, tiempoDisponible);
+
+        memo.set(key, resultado);
+        return resultado;
+    };
+
+    return optimizar;
+};
+
+const tieneGeneroBuscado = (pelicula, generosBuscados) =>
+    Array.isArray(pelicula.generos) &&
+    pelicula.generos.some(g => generosBuscados.includes(g.toLowerCase()));
+
 export const planificarMaraton = (peliculas, tiempoDisponibleMinutos, opciones = {}) => {
     const { ratingMinimo = 6.0, maximoPeliculas = 10, preferirRecientes = false } = opciones;
 
-    let candidatas = filtrarPeliculasValidas(peliculas);
-    candidatas = candidatas.filter(p => p.rating >= ratingMinimo);
+    const filtradasPorValidez = filtrarPeliculasValidas(peliculas);
+    const candidatas = filtradasPorValidez.filter(p => p.rating >= ratingMinimo);
+    const candidatasOrdenadas = preferirRecientes
+        ? ordenarPorFechaDesc(candidatas)
+        : candidatas;
 
-    if (preferirRecientes) {
-        candidatas.sort((a, b) => {
-            const fechaA = new Date(a.fecha || 0).getTime();
-            const fechaB = new Date(b.fecha || 0).getTime();
-            return fechaB - fechaA;
-        });
-    }
+    const ordenadasPorValor = ordenarPorValor(candidatasOrdenadas);
 
-    const ordenadas = ordenarPorValor(candidatas);
     // Limitamos el input del algoritmo para evitar Stack Overflow en casos extremos
-    const candidatasFinales = ordenadas.slice(0, 60);
+    const candidatasFinales = limitarPeliculas(ordenadasPorValor, 60);
 
-    let seleccionadas = optimizarMaratonRecursivo(candidatasFinales, tiempoDisponibleMinutos, {});
-
-    if (seleccionadas.length > maximoPeliculas) {
-        seleccionadas = seleccionadas.slice(0, maximoPeliculas);
-    }
+    const optimizarMaratonRecursivo = crearOptimizadorMaraton();
+    const seleccionadasBase = optimizarMaratonRecursivo(candidatasFinales, tiempoDisponibleMinutos);
+    const seleccionadas = limitarPeliculas(seleccionadasBase, maximoPeliculas);
 
     const tiempoTotal = calcularTiempoTotal(seleccionadas);
     const ratingPromedio = calcularRatingPromedio(seleccionadas);
@@ -145,10 +153,7 @@ export const planificarMaraton = (peliculas, tiempoDisponibleMinutos, opciones =
 export const planificarMaratonTematico = (peliculas, tiempo, generos, opciones = {}) => {
     const generosBuscados = generos.map(g => g.toLowerCase());
 
-    const filtradas = peliculas.filter(p => {
-        if (!p.generos || !Array.isArray(p.generos)) return false;
-        return p.generos.some(g => generosBuscados.includes(g.toLowerCase()));
-    });
+    const filtradas = peliculas.filter(p => tieneGeneroBuscado(p, generosBuscados));
 
     if (filtradas.length === 0) {
         return {
