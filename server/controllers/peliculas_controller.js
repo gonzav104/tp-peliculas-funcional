@@ -157,15 +157,30 @@ export const getPresetsMaraton = (req, res) => {
 // --- UTILIDADES ---
 
 export const getTrailers = async (req, res) => {
-    if (!req.query.peli) throw new Error("Falta parámetro peli");
-    const trailers = await buscarTrailersPelicula(req.query.peli);
-    success(res, { datos: trailers });
+    if (!req.query.peli) {
+        return error(res, 'Falta parámetro "peli"', 400);
+    }
+
+    try {
+        const trailers = await buscarTrailersPelicula(req.query.peli);
+        return success(res, { datos: trailers });
+    } catch (err) {
+        // Manejo seguro de errores: uso helper de respuesta para no filtrar detalles
+        return error(res, ERRORES.YOUTUBE_QUOTA || err.message || 'Error obteniendo trailers', 500);
+    }
 };
 
 export const getVideoStats = async (req, res) => {
-    if (!req.query.id) throw new Error("Falta parámetro id");
-    const stats = await obtenerEstadisticasVideo(req.query.id);
-    success(res, { datos: stats });
+    if (!req.query.id) {
+        return error(res, 'Falta parámetro "id"', 400);
+    }
+
+    try {
+        const stats = await obtenerEstadisticasVideo(req.query.id);
+        return success(res, { datos: stats });
+    } catch (err) {
+        return error(res, ERRORES.YOUTUBE_QUOTA || err.message || 'Error obteniendo estadísticas del video', 500);
+    }
 };
 
 export const getEstado = (req, res) => {
