@@ -72,24 +72,24 @@ const generarDescripcion = (peliculas, tiempoTotal, ratingPromedio) => {
         `con rating promedio de ${ratingPromedio.toFixed(1)}: ${titulos}`;
 };
 
-const generarHash = (peliculas, tiempo) => {
+const generarHash = (peliculas, tiempo, maximoPermitido) => {
     const ids = [...peliculas]
         .map(p => p.id)
         .sort((a, b) => a - b)
         .join(',');
 
-    return crypto.createHash('md5').update(`${ids}|${tiempo}`).digest('hex');
+    return crypto.createHash('md5').update(`${ids}|${tiempo}|${maximoPermitido}`).digest('hex');
 };
 
 const crearOptimizadorMaraton = () => {
     const memo = new Map();
 
-    const optimizar = (peliculas, tiempoDisponible) => {
-        if (peliculas.length === 0 || tiempoDisponible <= 0) {
+    const optimizar = (peliculas, tiempoDisponible, maximoPermitido) => {
+        if (peliculas.length === 0 || tiempoDisponible <= 0 || maximoPermitido <= 0) {
             return [];
         }
 
-        const key = generarHash(peliculas, tiempoDisponible);
+        const key = generarHash(peliculas, tiempoDisponible, maximoPermitido);
         if (memo.has(key)) return memo.get(key);
 
         const [actual, ...resto] = peliculas;
@@ -97,8 +97,8 @@ const crearOptimizadorMaraton = () => {
 
         const resultado = duracionActual <= tiempoDisponible
             ? (() => {
-                const conActual = optimizar(resto, tiempoDisponible - duracionActual);
-                const sinActual = optimizar(resto, tiempoDisponible);
+                const conActual = optimizar(resto, tiempoDisponible - duracionActual, maximoPermitido - 1);
+                const sinActual = optimizar(resto, tiempoDisponible, maximoPermitido);
 
                 const ratingCon = conActual.reduce((acc, p) => acc + p.rating, 0) + actual.rating;
                 const ratingSin = sinActual.reduce((acc, p) => acc + p.rating, 0);
@@ -133,8 +133,7 @@ export const planificarMaraton = (peliculas, tiempoDisponibleMinutos, opciones =
     const candidatasFinales = limitarPeliculas(ordenadasPorValor, 60);
 
     const optimizarMaratonRecursivo = crearOptimizadorMaraton();
-    const seleccionadasBase = optimizarMaratonRecursivo(candidatasFinales, tiempoDisponibleMinutos);
-    const seleccionadas = limitarPeliculas(seleccionadasBase, maximoPeliculas);
+    const seleccionadas = optimizarMaratonRecursivo(candidatasFinales, tiempoDisponibleMinutos, maximoPeliculas);
 
     const tiempoTotal = calcularTiempoTotal(seleccionadas);
     const ratingPromedio = calcularRatingPromedio(seleccionadas);
