@@ -66,7 +66,7 @@ const combinarFuentes = (datosTMDB, datosYouTube, datosStreaming = null, fechaUn
 
 const esUnificacionValida = (pelicula) =>
     Boolean(
-        pelicula.id &&
+        typeof pelicula.id === 'number' &&
         pelicula.titulo &&
         pelicula.imagen &&
         pelicula.rating !== undefined

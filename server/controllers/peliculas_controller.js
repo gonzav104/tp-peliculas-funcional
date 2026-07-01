@@ -165,8 +165,7 @@ export const getTrailers = async (req, res) => {
         const trailers = await buscarTrailersPelicula(req.query.peli);
         return success(res, { datos: trailers });
     } catch (err) {
-        // Manejo seguro de errores: uso helper de respuesta para no filtrar detalles
-        return error(res, ERRORES.YOUTUBE_QUOTA || err.message || 'Error obteniendo trailers', 500);
+        return error(res, err.message || 'Error en la solicitud', 500);
     }
 };
 
@@ -179,7 +178,7 @@ export const getVideoStats = async (req, res) => {
         const stats = await obtenerEstadisticasVideo(req.query.id);
         return success(res, { datos: stats });
     } catch (err) {
-        return error(res, ERRORES.YOUTUBE_QUOTA || err.message || 'Error obteniendo estadísticas del video', 500);
+        return error(res, err.message || 'Error en la solicitud', 500);
     }
 };
 

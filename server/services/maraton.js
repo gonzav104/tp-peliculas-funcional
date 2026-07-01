@@ -1,7 +1,5 @@
 // Algoritmo de maraton - optimizacion recursiva y funciones puras
 
-import crypto from 'crypto';
-
 /**
  * @typedef {Object} Pelicula
  * @property {number} id
@@ -39,7 +37,7 @@ const formatearTiempo = (minutos) => {
 
 const esPeliculaValida = (pelicula) =>
     Boolean(
-        pelicula.id &&
+        typeof pelicula.id === 'number' &&
         pelicula.titulo &&
         pelicula.rating !== undefined &&
         pelicula.duracion && pelicula.duracion > 0
@@ -73,12 +71,7 @@ const generarDescripcion = (peliculas, tiempoTotal, ratingPromedio) => {
 };
 
 const generarHash = (peliculas, tiempo, maximoPermitido) => {
-    const ids = [...peliculas]
-        .map(p => p.id)
-        .sort((a, b) => a - b)
-        .join(',');
-
-    return crypto.createHash('md5').update(`${ids}|${tiempo}|${maximoPermitido}`).digest('hex');
+    return `${peliculas.length}|${tiempo}|${maximoPermitido}`;
 };
 
 const crearOptimizadorMaraton = () => {
@@ -105,7 +98,7 @@ const crearOptimizadorMaraton = () => {
 
                 return ratingCon >= ratingSin ? [actual, ...conActual] : sinActual;
             })()
-            : optimizar(resto, tiempoDisponible);
+            : optimizar(resto, tiempoDisponible, maximoPermitido);
 
         memo.set(key, resultado);
         return resultado;

@@ -1,20 +1,29 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
+import { useDebounce } from '../hooks';
 import styles from './SearchBar.module.css';
 
 export const SearchBar = ({ onSearch }) => {
     const [query, setQuery] = useState('');
+    const debouncedQuery = useDebounce(query, 350);
+    const isFirstRender = useRef(true);
 
     const handleChange = (e) => {
-        const value = e.target.value;
-        setQuery(value);
-        onSearch(value);
+        setQuery(e.target.value);
     };
 
     const handleClear = () => {
         setQuery('');
-        onSearch('');
     };
+
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
+
+        onSearch(debouncedQuery);
+    }, [debouncedQuery, onSearch]);
 
     return (
         <div className={styles.searchContainer}>
