@@ -70,8 +70,7 @@ export const useForm = (initialValues, onSubmit) => {
         // Limpiar error del campo al modificarlo
         if (errors[name]) {
             setErrors(prev => {
-                const newErrors = { ...prev };
-                delete newErrors[name];
+                const { [name]: _removedError, ...newErrors } = prev;
                 return newErrors;
             });
         }
@@ -187,13 +186,20 @@ export const useLocalStorage = (key, initialValue) => {
 
     const setValue = useCallback((value) => {
         try {
-            const valueToStore = value instanceof Function ? value(storedValue) : value;
-            setStoredValue(valueToStore);
-            window.localStorage.setItem(key, JSON.stringify(valueToStore));
+            // Usar updater funcional para evitar condiciones de carrera (stale closures)
+            setStoredValue(prev => {
+                const valueToStore = value instanceof Function ? value(prev) : value;
+                try {
+                    window.localStorage.setItem(key, JSON.stringify(valueToStore));
+                } catch (err) {
+                    console.warn(`Error setting localStorage key "${key}":`, err);
+                }
+                return valueToStore;
+            });
         } catch (error) {
             console.warn(`Error setting localStorage key "${key}":`, error);
         }
-    }, [key, storedValue]);
+    }, [key]);
 
     const remove = useCallback(() => {
         try {

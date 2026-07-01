@@ -169,13 +169,14 @@ export const formatearNumeroGrande = (num) => {
  * @returns {Object}
  */
 export const agruparPor = (array, key) => {
+    // Reducir de forma inmutable: en cada iteración retornamos un nuevo objeto
     return array.reduce((result, item) => {
         const groupKey = item[key];
-        if (!result[groupKey]) {
-            result[groupKey] = [];
-        }
-        result[groupKey].push(item);
-        return result;
+        const existingGroup = result[groupKey] || [];
+        return {
+            ...result,
+            [groupKey]: [...existingGroup, item]
+        };
     }, {});
 };
 
