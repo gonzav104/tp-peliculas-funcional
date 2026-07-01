@@ -33,3 +33,7 @@ yarn-error.log*
 # --- Sistema Operativo ---
 .DS_Store
 Thumbs.db
+# Archivos de IA
+AGENT.md
+skills/
+workflows/
