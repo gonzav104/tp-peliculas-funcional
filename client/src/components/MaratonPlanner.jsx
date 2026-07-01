@@ -21,6 +21,56 @@ const DECADAS = [
     { label: '2020s', value: 2020 }
 ];
 
+const TABS = [
+    { id: 'automatico', label: 'Maratón Automático' },
+    { id: 'tematico', label: 'Por Género' },
+    { id: 'decada', label: 'Viaje en el Tiempo' }
+];
+
+const crearManejadorNumero = (setter) => (e) => setter(Number(e.target.value));
+
+const crearManejadorSeleccion = (accion) => (valor) => () => accion(valor);
+
+const obtenerMensajeError = (error) => error?.message || 'Error desconocido';
+
+const obtenerErrorTematico = (generosSeleccionados) => (
+    generosSeleccionados.length > 0 ? null : 'Selecciona al menos un género'
+);
+
+const ejecutarPlanificacion = ({
+    setLoading,
+    setError,
+    setResultado,
+    tipo,
+    solicitud,
+    validar = null
+}) => {
+    const errorValidacion = validar ? validar() : null;
+
+    if (errorValidacion) {
+        setError(errorValidacion);
+        return Promise.resolve(false);
+    }
+
+    setLoading(true);
+    setError(null);
+    setResultado(null);
+
+    return Promise.resolve()
+        .then(solicitud)
+        .then((data) => {
+            setResultado({ ...data, tipo });
+            return true;
+        })
+        .catch((error) => {
+            setError(obtenerMensajeError(error));
+            return false;
+        })
+        .finally(() => {
+            setLoading(false);
+        });
+};
+
 export const MaratonPlanner = () => {
     const [tabActiva, setTabActiva] = useState('automatico');
 
@@ -53,70 +103,52 @@ export const MaratonPlanner = () => {
         );
     };
 
-    const handleSubmitAutomatico = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setError(null);
-        setResultado(null);
+    const ejecutarSolicitud = (solicitud, tipo, validar = null) => {
+        return ejecutarPlanificacion({
+            setLoading,
+            setError,
+            setResultado,
+            tipo,
+            solicitud,
+            validar
+        });
+    };
 
-        try {
-            const data = await planificarMaraton({
+    const handleSubmitAutomatico = (e) => {
+        e.preventDefault();
+        return ejecutarSolicitud(
+            () => planificarMaraton({
                 tiempo,
                 ratingMinimo,
                 maximoPeliculas
-            });
-            setResultado({ ...data, tipo: 'automatico' });
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
+            }),
+            'automatico'
+        );
     };
 
-    const handleSubmitTematico = async (e) => {
+    const handleSubmitTematico = (e) => {
         e.preventDefault();
-
-        if (generosSeleccionados.length === 0) {
-            setError('Selecciona al menos un género');
-            return;
-        }
-
-        setLoading(true);
-        setError(null);
-        setResultado(null);
-
-        try {
-            const data = await planificarMaratonTematico({
+        return ejecutarSolicitud(
+            () => planificarMaratonTematico({
                 tiempo: tiempoTematico,
                 generos: generosSeleccionados,
                 ratingMinimo: ratingTematico
-            });
-            setResultado({ ...data, tipo: 'tematico' });
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
+            }),
+            'tematico',
+            () => obtenerErrorTematico(generosSeleccionados)
+        );
     };
 
-    const handleSubmitDecada = async (e) => {
+    const handleSubmitDecada = (e) => {
         e.preventDefault();
-        setLoading(true);
-        setError(null);
-        setResultado(null);
-
-        try {
-            const data = await planificarMaratonDecada({
+        return ejecutarSolicitud(
+            () => planificarMaratonDecada({
                 tiempo: tiempoDecada,
                 decada: decadaSeleccionada,
                 ratingMinimo: ratingDecada
-            });
-            setResultado({ ...data, tipo: 'decada' });
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
+            }),
+            'decada'
+        );
     };
 
     // === RENDER ===
@@ -130,24 +162,15 @@ export const MaratonPlanner = () => {
 
             {/* TABS */}
             <div className={styles.tabs}>
-                <button
-                    className={`${styles.tab} ${tabActiva === 'automatico' ? styles.tabActiva : ''}`}
-                    onClick={() => setTabActiva('automatico')}
-                >
-                     Maratón Automático
-                </button>
-                <button
-                    className={`${styles.tab} ${tabActiva === 'tematico' ? styles.tabActiva : ''}`}
-                    onClick={() => setTabActiva('tematico')}
-                >
-                     Por Género
-                </button>
-                <button
-                    className={`${styles.tab} ${tabActiva === 'decada' ? styles.tabActiva : ''}`}
-                    onClick={() => setTabActiva('decada')}
-                >
-                     Viaje en el Tiempo
-                </button>
+                {TABS.map(({ id, label }) => (
+                    <button
+                        key={id}
+                        className={`${styles.tab} ${tabActiva === id ? styles.tabActiva : ''}`}
+                        onClick={crearManejadorSeleccion(setTabActiva)(id)}
+                    >
+                        {label}
+                    </button>
+                ))}
             </div>
 
             {/* CONTENIDO DE TABS */}
@@ -171,7 +194,7 @@ export const MaratonPlanner = () => {
                                 max="720"
                                 step="30"
                                 value={tiempo}
-                                onChange={(e) => setTiempo(Number(e.target.value))}
+                                onChange={crearManejadorNumero(setTiempo)}
                                 className={styles.slider}
                             />
                         </div>
@@ -187,7 +210,7 @@ export const MaratonPlanner = () => {
                                 max="10"
                                 step="0.5"
                                 value={ratingMinimo}
-                                onChange={(e) => setRatingMinimo(Number(e.target.value))}
+                                onChange={crearManejadorNumero(setRatingMinimo)}
                                 className={styles.slider}
                             />
                         </div>
@@ -203,7 +226,7 @@ export const MaratonPlanner = () => {
                                 max="20"
                                 step="1"
                                 value={maximoPeliculas}
-                                onChange={(e) => setMaximoPeliculas(Number(e.target.value))}
+                                onChange={crearManejadorNumero(setMaximoPeliculas)}
                                 className={styles.slider}
                             />
                         </div>
@@ -233,7 +256,7 @@ export const MaratonPlanner = () => {
                                 max="720"
                                 step="30"
                                 value={tiempoTematico}
-                                onChange={(e) => setTiempoTematico(Number(e.target.value))}
+                                onChange={crearManejadorNumero(setTiempoTematico)}
                                 className={styles.slider}
                             />
                         </div>
@@ -248,7 +271,7 @@ export const MaratonPlanner = () => {
                                         className={`${styles.generoBtn} ${
                                             generosSeleccionados.includes(genero) ? styles.generoActivo : ''
                                         }`}
-                                        onClick={() => toggleGenero(genero)}
+                                        onClick={crearManejadorSeleccion(toggleGenero)(genero)}
                                     >
                                         {genero}
                                     </button>
@@ -267,7 +290,7 @@ export const MaratonPlanner = () => {
                                 max="10"
                                 step="0.5"
                                 value={ratingTematico}
-                                onChange={(e) => setRatingTematico(Number(e.target.value))}
+                                onChange={crearManejadorNumero(setRatingTematico)}
                                 className={styles.slider}
                             />
                         </div>
@@ -297,7 +320,7 @@ export const MaratonPlanner = () => {
                                 max="720"
                                 step="30"
                                 value={tiempoDecada}
-                                onChange={(e) => setTiempoDecada(Number(e.target.value))}
+                                onChange={crearManejadorNumero(setTiempoDecada)}
                                 className={styles.slider}
                             />
                         </div>
@@ -312,7 +335,7 @@ export const MaratonPlanner = () => {
                                         className={`${styles.decadaBtn} ${
                                             decadaSeleccionada === value ? styles.decadaActiva : ''
                                         }`}
-                                        onClick={() => setDecadaSeleccionada(value)}
+                                        onClick={crearManejadorSeleccion(setDecadaSeleccionada)(value)}
                                     >
                                         {label}
                                     </button>
@@ -331,7 +354,7 @@ export const MaratonPlanner = () => {
                                 max="10"
                                 step="0.5"
                                 value={ratingDecada}
-                                onChange={(e) => setRatingDecada(Number(e.target.value))}
+                                onChange={crearManejadorNumero(setRatingDecada)}
                                 className={styles.slider}
                             />
                         </div>

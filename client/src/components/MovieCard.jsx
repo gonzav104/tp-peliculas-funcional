@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Star, Calendar, Clock, Eye, Play, Info, VideoOff, DollarSign, Globe, Briefcase, Activity } from 'lucide-react';
 import { StreamingBadge } from './StreamingBadge';
 import styles from './MovieCard.module.css';
@@ -6,20 +6,6 @@ import styles from './MovieCard.module.css';
 export const MovieCard = ({ pelicula }) => {
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [showTrailer, setShowTrailer] = useState(false);
-
-    // CLEANUP: Detener videos al cerrar modal
-    useEffect(() => {
-        if (!showTrailer) {
-            const iframes = document.querySelectorAll('iframe');
-            iframes.forEach(iframe => {
-                if (iframe.src.includes('youtube')) {
-                    const currentSrc = iframe.src;
-                    iframe.src = '';
-                    iframe.src = currentSrc;
-                }
-            });
-        }
-    }, [showTrailer]);
 
     const formatearRating = (rating) => rating ? rating.toFixed(1) : 'N/A';
 
@@ -248,6 +234,7 @@ export const MovieCard = ({ pelicula }) => {
                     <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                         <button className={styles.closeModal} onClick={closeTrailer}>✕</button>
                         <iframe
+                            key={pelicula.trailer.id}
                             src={`${pelicula.trailer.urlEmbed}?autoplay=1`}
                             title="Trailer"
                             className={styles.iframe}

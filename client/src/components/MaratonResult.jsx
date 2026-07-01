@@ -106,7 +106,7 @@ export const MaratonResult = ({ resultado }) => {
                 <h3>Secuencia del Maratón</h3>
                 <div className={styles.timelineItems}>
                     {plan.peliculas.map((pelicula, index) => (
-                        <div key={index} className={styles.timelineItem}>
+                        <div key={pelicula.id} className={styles.timelineItem}>
                             <div className={styles.timelineNumber}>{index + 1}</div>
 
                             <div
