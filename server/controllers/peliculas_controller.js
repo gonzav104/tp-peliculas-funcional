@@ -71,13 +71,13 @@ export const getMejorCalificadas = async (req, res) => {
 };
 
 export const buscar = async (req, res) => {
-    const input = validar(buscarSchema, req.query, res);
-    if (!input) return;
+     const input = validar(buscarSchema, req.query, res);
+     if (!input) return;
 
-    const resultados = await buscarPeliculasMemo(input.q);
-    const datos = resultados.slice(0, input.limite || 20);
-    success(res, { termino: input.q, cantidad: datos.length, datos });
-};
+     const resultados = await buscarPeliculasMemo(input.q);
+     const datos = resultados.slice(0, input.limite);
+     success(res, { termino: input.q, cantidad: datos.length, datos });
+ };
 
 export const buscarEnriquecida = async (req, res) => {
     const input = validar(buscarSchema, req.query, res);

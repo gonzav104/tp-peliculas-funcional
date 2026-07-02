@@ -9,29 +9,6 @@ export const API_CONFIG = {
     RETRY_ATTEMPTS: 3
 };
 
-// === GÉNEROS DISPONIBLES ===
-export const GENEROS = [
-    'Action',
-    'Adventure',
-    'Animation',
-    'Comedy',
-    'Crime',
-    'Documentary',
-    'Drama',
-    'Family',
-    'Fantasy',
-    'History',
-    'Horror',
-    'Music',
-    'Mystery',
-    'Romance',
-    'Science Fiction',
-    'Sci-Fi',
-    'Thriller',
-    'TV Movie',
-    'War',
-    'Western'
-];
 
 // === DÉCADAS ===
 export const DECADAS = [

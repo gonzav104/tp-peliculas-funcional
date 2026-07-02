@@ -262,8 +262,7 @@ tp-peliculas-funcional/
 │   │   │   └── apiClient.js         # Cliente HTTP centralizado
 │   │   ├── utils/
 │   │   │   ├── constants.js         # Constantes del frontend
-│   │   │   ├── helpers.js           # Funciones auxiliares
-│   │   │   └── validators.js        # Validaciones
+│   │   │   └── helpers.js           # Funciones auxiliares
 │   │   ├── App.jsx                  # Componente raíz
 │   │   └── main.jsx                 # Punto de entrada React
 │   ├── package.json

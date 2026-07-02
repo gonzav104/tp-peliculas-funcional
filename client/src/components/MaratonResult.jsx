@@ -170,11 +170,6 @@ export const MaratonResult = ({ resultado }) => {
 
             {/* MODAL DE DETALLES */}
             {peliculaSeleccionada && (
-                <div style={{ display: 'none' }}>
-                    <MovieCard pelicula={peliculaSeleccionada} />
-                </div>
-            )}
-            {peliculaSeleccionada && (
                 <div className={styles.modalOverlay} onClick={() => setPeliculaSeleccionada(null)}>
                     <div className={styles.modalWrapper} onClick={(e) => e.stopPropagation()}>
                         <button

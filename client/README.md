@@ -60,10 +60,8 @@ client/
     ├── services/
     │   └── apiClient.js           # Cliente HTTP centralizado
     ├── utils/
-    │   ├── index.js               # Barrel export
     │   ├── constants.js           # Constantes (colores, límites, mensajes)
-    │   ├── helpers.js             # Funciones puras de formateo y utilidad
-    │   └── validators.js          # Validadores de formularios
+    │   └── helpers.js             # Funciones puras de formateo y utilidad
     └── test/
         └── setup.js               # Setup de Vitest (jest-dom matchers)
 ```

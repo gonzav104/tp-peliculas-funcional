@@ -44,9 +44,10 @@ export const maratonDecadaSchema = z.object({
         .min(1900, "Muy antiguo para nuestro catálogo")
         .max(2030, "No podemos predecir el futuro")
         .refine(val => val % 10 === 0, "Debe ser una década (ej: 1980, 1990)")
-    ,
-    // Filtrado adicional por rating cuando se planifica por década
-    ratingMinimo: z.number().min(0).max(10).optional()
-});
+     ,
+     // Filtrado adicional por rating cuando se planifica por década
+     ratingMinimo: z.number().min(0).max(10).optional(),
+     maximoPeliculas: z.number().int().positive().optional()
+ });
 
 
