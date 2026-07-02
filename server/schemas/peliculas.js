@@ -46,8 +46,4 @@ export const maratonDecadaSchema = z.object({
         .refine(val => val % 10 === 0, "Debe ser una década (ej: 1980, 1990)")
 });
 
-// Esquema simple para utilidades (Youtube)
-export const youtubeSchema = z.object({
-    peli: z.string().min(1),
-    id: z.string().min(1) // Para video stats
-});
+
