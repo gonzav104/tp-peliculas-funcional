@@ -71,7 +71,9 @@ const generarDescripcion = (peliculas, tiempoTotal, ratingPromedio) => {
 };
 
 const generarHash = (peliculas, tiempo, maximoPermitido) => {
-    return `${peliculas.length}|${tiempo}|${maximoPermitido}`;
+    // Evitar colisiones simples incluyendo los ids de las películas en la clave
+    const ids = peliculas.map(p => (p && typeof p.id !== 'undefined' ? String(p.id) : '')).join(',');
+    return `${tiempo}|${maximoPermitido}|${ids}`;
 };
 
 const crearOptimizadorMaraton = () => {
@@ -116,14 +118,14 @@ export const planificarMaraton = (peliculas, tiempoDisponibleMinutos, opciones =
 
     const filtradasPorValidez = filtrarPeliculasValidas(peliculas);
     const candidatas = filtradasPorValidez.filter(p => p.rating >= ratingMinimo);
+    // Si se prefieren recientes, ordenar exclusivamente por fecha
+    // Si no, ordenar por valor/rating (exclusivo). No ejecutar ambas ordenaciones.
     const candidatasOrdenadas = preferirRecientes
         ? ordenarPorFechaDesc(candidatas)
-        : candidatas;
-
-    const ordenadasPorValor = ordenarPorValor(candidatasOrdenadas);
+        : ordenarPorValor(candidatas);
 
     // Limitamos el input del algoritmo para evitar Stack Overflow en casos extremos
-    const candidatasFinales = limitarPeliculas(ordenadasPorValor, 60);
+    const candidatasFinales = limitarPeliculas(candidatasOrdenadas, 60);
 
     const optimizarMaratonRecursivo = crearOptimizadorMaraton();
     const seleccionadas = optimizarMaratonRecursivo(candidatasFinales, tiempoDisponibleMinutos, maximoPeliculas);

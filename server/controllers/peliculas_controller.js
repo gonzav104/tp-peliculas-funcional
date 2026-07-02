@@ -75,7 +75,8 @@ export const buscar = async (req, res) => {
     if (!input) return;
 
     const resultados = await buscarPeliculasMemo(input.q);
-    success(res, { termino: input.q, cantidad: resultados.length, datos: resultados });
+    const datos = resultados.slice(0, input.limite || 20);
+    success(res, { termino: input.q, cantidad: datos.length, datos });
 };
 
 export const buscarEnriquecida = async (req, res) => {
@@ -144,7 +145,10 @@ export const planearMaratonDecada = async (req, res) => {
     const cantidadAEnriquecer = MODO_AHORRO ? LIMITES.MARATON_AHORRO : LIMITES.MARATON_PROD;
     const peliculasEnriquecidas = await enriquecerListaPeliculas(peliculasClasicas.slice(0, cantidadAEnriquecer));
 
-    const plan = planificarMaraton(peliculasEnriquecidas, input.tiempo);
+    const plan = planificarMaraton(peliculasEnriquecidas, input.tiempo, {
+        ratingMinimo: typeof input.ratingMinimo === 'number' ? input.ratingMinimo : undefined,
+        maximoPeliculas: input.maximoPeliculas
+    });
     const analisis = analizarPlan(plan);
 
     success(res, { tematica: `Década de ${input.decada}s`, plan, analisis });
