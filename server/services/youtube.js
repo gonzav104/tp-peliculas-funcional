@@ -30,6 +30,19 @@ const FALLBACK_VIDEO = {
 
 // Capa de acceso a YouTube
 const fetchYouTube = async (endpoint, params = {}) => {
+    // Bug Fix 1: Validar que API_KEY esté disponible antes de hacer peticiones HTTP
+    // Si API_KEY es falsy (undefined, null, empty string), retornar Left sin efectos secundarios
+    if (!API_KEY || API_KEY.trim() === '') {
+        console.warn(`YouTube API_KEY no configurada [${endpoint}]`);
+        // @ts-ignore
+        return Either.Left({
+            mensaje: 'YouTube API_KEY no configurada',
+            detalle: 'La variable de entorno YOUTUBE_API_KEY no está disponible',
+            endpoint,
+            status: 503
+        });
+    }
+
     try {
         const url = `${BASE_URL}${endpoint}`;
         const config = {

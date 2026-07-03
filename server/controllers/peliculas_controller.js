@@ -2,7 +2,8 @@ import {
     obtenerPeliculasPopulares,
     buscarPeliculasMemo,
     obtenerPeliculasCalidad,
-    descubrirPeliculasPorDecada
+    descubrirPeliculasPorDecada,
+    descubrirPeliculasPorGenero
 } from '../services/tmdb.js';
 
 import {
@@ -112,13 +113,29 @@ export const planearMaratonTematico = async (req, res) => {
     const input = validar(maratonTematicoSchema, req.body, res);
     if (!input) return;
 
-    // Lógica dinámica según modo
-    const cantidadPeliculas = MODO_AHORRO ? LIMITES.MARATON_AHORRO : LIMITES.BUSQUEDA_PROD;
+    // Bug Fix 2: Usar endpoint discover/movie de TMDB con with_genres
+    // en lugar de filtrar localmente sobre películas populares
+    const peliculasDescubiertas = await descubrirPeliculasPorGenero(input.generos, 1);
 
-    const peliculas = await obtenerPopularesEnriquecidas(cantidadPeliculas);
+    if (peliculasDescubiertas.length === 0) {
+        return success(res, {
+            tematica: input.generos.join(', '),
+            plan: {
+                peliculas: [],
+                tiempoTotal: 0,
+                cantidadPeliculas: 0,
+                descripcion: `No se encontraron películas de los géneros: ${input.generos.join(', ')}`
+            },
+            analisis: { tiempoTotal: 0, cantidadPeliculas: 0 }
+        });
+    }
+
+    // Enriquecer las películas descubiertas
+    const cantidadAEnriquecer = MODO_AHORRO ? LIMITES.MARATON_AHORRO : Math.min(peliculasDescubiertas.length, LIMITES.BUSQUEDA_PROD);
+    const peliculasEnriquecidas = await enriquecerListaPeliculas(peliculasDescubiertas.slice(0, cantidadAEnriquecer));
 
     const plan = planificarMaratonTematico(
-        peliculas,
+        peliculasEnriquecidas,
         input.tiempo,
         input.generos,
         {
@@ -138,8 +155,20 @@ export const planearMaratonDecada = async (req, res) => {
 
     const peliculasClasicas = await descubrirPeliculasPorDecada(input.decada);
 
+    // Bug Fix 3: Si no hay películas, retornar un objeto válido que respete el contrato del frontend
+    // NUNCA retornar un array vacío. El frontend espera siempre { peliculas: [], tiempoTotal: 0, ... }
     if (peliculasClasicas.length === 0) {
-        return success(res, { mensaje: ERRORES.NO_RESULTADOS, plan: [] });
+        const planVacio = {
+            peliculas: [],
+            tiempoTotal: 0,
+            cantidadPeliculas: 0,
+            descripcion: `No se encontraron películas para la década de los ${input.decada}s`
+        };
+        return success(res, {
+            tematica: `Década de ${input.decada}s`,
+            plan: planVacio,
+            analisis: { tiempoTotal: 0, cantidadPeliculas: 0 }
+        });
     }
 
     const cantidadAEnriquecer = MODO_AHORRO ? LIMITES.MARATON_AHORRO : LIMITES.MARATON_PROD;
@@ -149,9 +178,21 @@ export const planearMaratonDecada = async (req, res) => {
         ratingMinimo: typeof input.ratingMinimo === 'number' ? input.ratingMinimo : undefined,
         maximoPeliculas: input.maximoPeliculas
     });
-    const analisis = analizarPlan(plan);
 
-    success(res, { tematica: `Década de ${input.decada}s`, plan, analisis });
+    // Asegurar que el plan sea un objeto válido, nunca un array
+    // Si planificarMaraton retorna algo inválido, usar plan vacío
+    const planValido = (
+        plan && typeof plan === 'object' && !Array.isArray(plan) && plan.peliculas
+    ) ? plan : {
+        peliculas: [],
+        tiempoTotal: 0,
+        cantidadPeliculas: 0,
+        descripcion: `Error al planificar maratón para la década de los ${input.decada}s`
+    };
+
+    const analisis = analizarPlan(planValido);
+
+    success(res, { tematica: `Década de ${input.decada}s`, plan: planValido, analisis });
 };
 
 export const getPresetsMaraton = (req, res) => {

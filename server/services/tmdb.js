@@ -103,6 +103,71 @@ export const descubrirPeliculasPorDecada = async (decada) => {
     );
 };
 
+// Bug Fix 2: Función para descubrir películas por género usando el endpoint discover/movie
+// Reemplaza el filtrado local sobre películas populares por una búsqueda directa en TMDB
+export const descubrirPeliculasPorGenero = async (generos = [], pagina = 1) => {
+    if (!generos || generos.length === 0) return [];
+
+    // TMDB espera IDs de género, pero si recibimos nombres, los mapeamos a IDs conocidos
+    // Mapping básico de géneros comunes (estos son IDs reales en TMDB)
+    const generoMap = {
+        'acción': 28,
+        'action': 28,
+        'aventura': 12,
+        'adventure': 12,
+        'animación': 16,
+        'animation': 16,
+        'comedia': 35,
+        'comedy': 35,
+        'crimen': 80,
+        'crime': 80,
+        'documental': 99,
+        'documentary': 99,
+        'drama': 18,
+        'familia': 10751,
+        'family': 10751,
+        'fantasía': 14,
+        'fantasy': 14,
+        'historia': 36,
+        'history': 36,
+        'horror': 27,
+        'música': 10402,
+        'music': 10402,
+        'misterio': 9648,
+        'mystery': 9648,
+        'romance': 10749,
+        'ciencia ficción': 878,
+        'science fiction': 878,
+        'sci-fi': 878,
+        'thriller': 53,
+        'guerra': 10752,
+        'war': 10752,
+        'occidental': 37,
+        'western': 37
+    };
+
+    // Convertir nombres de género a IDs (si aplica), manteniendo IDs numéricos que ya sean válidos
+    const generoIds = generos.map(g => {
+        const lower = String(g).toLowerCase();
+        return generoMap[lower] || (typeof g === 'number' ? g : null);
+    }).filter(id => id !== null);
+
+    if (generoIds.length === 0) return [];
+
+    const resultado = await fetchTMDB('/discover/movie', {
+        'with_genres': generoIds.join(','),
+        'sort_by': 'popularity.desc',
+        'page': pagina,
+        'vote_average.gte': 5.0,
+        'vote_count.gte': 50
+    }, TMDBListResponseSchema);
+
+    return resultado.fold(
+        () => [],
+        (data) => procesarPeliculasEstandar(data.results || [])
+    );
+};
+
 export const buscarPeliculas = async (query) => {
     if (!query || query.trim().length === 0) return [];
 
