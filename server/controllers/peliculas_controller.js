@@ -118,14 +118,19 @@ export const planearMaratonTematico = async (req, res) => {
     const peliculasDescubiertas = await descubrirPeliculasPorGenero(input.generos, 1);
 
     if (peliculasDescubiertas.length === 0) {
+        const planVacio = {
+            peliculas: [],
+            tiempoTotal: 0,
+            cantidadPeliculas: 0,
+            tiempoDisponible: input.tiempo,
+            tiempoRestante: input.tiempo,
+            ratingPromedio: 0,
+            descripcion: 'No se encontraron películas...'
+        };
+
         return success(res, {
             tematica: input.generos.join(', '),
-            plan: {
-                peliculas: [],
-                tiempoTotal: 0,
-                cantidadPeliculas: 0,
-                descripcion: `No se encontraron películas de los géneros: ${input.generos.join(', ')}`
-            },
+            plan: planVacio,
             analisis: { tiempoTotal: 0, cantidadPeliculas: 0 }
         });
     }
@@ -162,7 +167,10 @@ export const planearMaratonDecada = async (req, res) => {
             peliculas: [],
             tiempoTotal: 0,
             cantidadPeliculas: 0,
-            descripcion: `No se encontraron películas para la década de los ${input.decada}s`
+            tiempoDisponible: input.tiempo,
+            tiempoRestante: input.tiempo,
+            ratingPromedio: 0,
+            descripcion: 'No se encontraron películas...'
         };
         return success(res, {
             tematica: `Década de ${input.decada}s`,
