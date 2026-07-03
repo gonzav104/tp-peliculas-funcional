@@ -6,7 +6,8 @@ jest.unstable_mockModule('../services/tmdb.js', () => ({
     buscarPeliculasMemo: jest.fn(),
     obtenerPeliculasPopulares: jest.fn(),
     obtenerPeliculasCalidad: jest.fn(),
-    descubrirPeliculasPorDecada: jest.fn()
+    descubrirPeliculasPorDecada: jest.fn(),
+    descubrirPeliculasPorGenero: jest.fn()
 }));
 
 jest.unstable_mockModule('../services/unificador.js', () => ({
