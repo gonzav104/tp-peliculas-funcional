@@ -16,6 +16,14 @@ const apiRequest = async (endpoint, options = {}) => {
             ...options,
         });
 
+        if (!response.ok) {
+            throw new Error(`Error de red: HTTP ${response.status}`);
+        }
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            throw new TypeError("El servidor no devolvió un JSON válido");
+        }
+
         const data = await response.json();
 
         // El backend SIEMPRE envuelve las respuestas con exito: true/false

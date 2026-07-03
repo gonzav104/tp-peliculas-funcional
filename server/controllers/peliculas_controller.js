@@ -39,7 +39,7 @@ import { success, error } from '../utils/response.js';
 // === CONFIGURACIÓN ===
 // true = Ahorra cuota (pocas peticiones)
 // false = Producción (muchas peticiones, mejores resultados)
-const MODO_AHORRO = false;
+const MODO_AHORRO = process.env.MODO_AHORRO === 'true';
 
 // Helper de validación local
 const validar = (schema, data, res) => {
@@ -123,7 +123,12 @@ export const planearMaratonTematico = async (req, res) => {
         return success(res, {
             tematica: input.generos.join(', '),
             plan: planVacio,
-            analisis: { tiempoTotal: 0, cantidadPeliculas: 0 }
+            analisis: {
+                eficienciaTemporal: "0%",
+                peliculasExcelentes: 0,
+                tiempoLibre: input.tiempo,
+                calidadGeneral: "N/A"
+            }
         });
     }
 
@@ -159,7 +164,12 @@ export const planearMaratonDecada = async (req, res) => {
         return success(res, {
             tematica: `Década de ${input.decada}s`,
             plan: planVacio,
-            analisis: { tiempoTotal: 0, cantidadPeliculas: 0 }
+            analisis: {
+                eficienciaTemporal: "0%",
+                peliculasExcelentes: 0,
+                tiempoLibre: input.tiempo,
+                calidadGeneral: "N/A"
+            }
         });
     }
 
