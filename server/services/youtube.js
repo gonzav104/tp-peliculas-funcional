@@ -135,10 +135,7 @@ export const buscarTrailerPelicula = async (tituloPelicula, anio = null) => {
     return resultado.fold(
         // CASO ERROR (Left)
         (err) => {
-                    // Si el error es por cuota (403) o por API_KEY faltante/config no disponible (503), devolvemos el video de respaldo
-                    if (err.status === 403 || err.status === 503) {
-                        return FALLBACK_VIDEO;
-                    }
+            if (err.status === 403 || err.status === 503) { return FALLBACK_VIDEO; }
             return null; // Otro error, devolvemos null
         },
         // CASO ÉXITO (Right)
@@ -163,9 +160,7 @@ export const buscarTrailersPelicula = async (tituloPelicula, limite = 3) => {
 
     return resultado.fold(
         (err) => {
-            // Devolvemos video de respaldo tanto si la cuota fue excedida (403)
-            // como si la API key no está configurada/problema de servicio (503)
-            if (err.status === 403 || err.status === 503) return [FALLBACK_VIDEO];
+            if (err.status === 403 || err.status === 503) { return [FALLBACK_VIDEO]; }
             return [];
         },
         (data) => {

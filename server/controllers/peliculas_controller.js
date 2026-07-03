@@ -118,15 +118,7 @@ export const planearMaratonTematico = async (req, res) => {
     const peliculasDescubiertas = await descubrirPeliculasPorGenero(input.generos, 1);
 
     if (peliculasDescubiertas.length === 0) {
-        const planVacio = {
-            peliculas: [],
-            tiempoTotal: 0,
-            cantidadPeliculas: 0,
-            tiempoDisponible: input.tiempo,
-            tiempoRestante: input.tiempo,
-            ratingPromedio: 0,
-            descripcion: 'No se encontraron películas...'
-        };
+        const planVacio = { peliculas: [], tiempoTotal: 0, cantidadPeliculas: 0, tiempoDisponible: input.tiempo, tiempoRestante: input.tiempo, ratingPromedio: 0, descripcion: "No se encontraron películas con estos criterios." };
 
         return success(res, {
             tematica: input.generos.join(', '),
@@ -163,15 +155,7 @@ export const planearMaratonDecada = async (req, res) => {
     // Bug Fix 3: Si no hay películas, retornar un objeto válido que respete el contrato del frontend
     // NUNCA retornar un array vacío. El frontend espera siempre { peliculas: [], tiempoTotal: 0, ... }
     if (peliculasClasicas.length === 0) {
-        const planVacio = {
-            peliculas: [],
-            tiempoTotal: 0,
-            cantidadPeliculas: 0,
-            tiempoDisponible: input.tiempo,
-            tiempoRestante: input.tiempo,
-            ratingPromedio: 0,
-            descripcion: 'No se encontraron películas...'
-        };
+        const planVacio = { peliculas: [], tiempoTotal: 0, cantidadPeliculas: 0, tiempoDisponible: input.tiempo, tiempoRestante: input.tiempo, ratingPromedio: 0, descripcion: "No se encontraron películas con estos criterios." };
         return success(res, {
             tematica: `Década de ${input.decada}s`,
             plan: planVacio,
@@ -191,12 +175,7 @@ export const planearMaratonDecada = async (req, res) => {
     // Si planificarMaraton retorna algo inválido, usar plan vacío
     const planValido = (
         plan && typeof plan === 'object' && !Array.isArray(plan) && plan.peliculas
-    ) ? plan : {
-        peliculas: [],
-        tiempoTotal: 0,
-        cantidadPeliculas: 0,
-        descripcion: `Error al planificar maratón para la década de los ${input.decada}s`
-    };
+    ) ? plan : { peliculas: [], tiempoTotal: 0, cantidadPeliculas: 0, tiempoDisponible: input.tiempo, tiempoRestante: input.tiempo, ratingPromedio: 0, descripcion: "No se encontraron películas con estos criterios." };
 
     const analisis = analizarPlan(planValido);
 
