@@ -150,5 +150,31 @@ describe('Controller de Películas (Validación Zod & Manejo de Errores)', () =>
                 plan: expect.objectContaining({ peliculas: ['peli_planificada'] })
             }));
         });
+
+        test('Debe consultar 3 páginas en maratón temático y usar el límite de producción', async () => {
+            const { planearMaratonTematico } = await import('./peliculas_controller.js');
+            const req = mockReq({}, { tiempo: 180, generos: ['Acción'], ratingMinimo: 6, maximoPeliculas: 10 });
+            const res = mockRes();
+
+            tmdbService.descubrirPeliculasPorGenero
+                .mockResolvedValueOnce([{ id: 1 }, { id: 2 }])
+                .mockResolvedValueOnce([{ id: 3 }])
+                .mockResolvedValueOnce([{ id: 4 }, { id: 5 }, { id: 6 }]);
+
+            const planMock = { peliculas: ['peli_tematica'], tiempoTotal: 100, ratingPromedio: 7.2, cantidadPeliculas: 1 };
+            maratonService.planificarMaratonTematico.mockReturnValue(planMock);
+            maratonService.analizarPlan.mockReturnValue({ eficienciaTemporal: '55.6%', peliculasExcelentes: 1, tiempoLibre: '1h 20m', calidadGeneral: 'Buena' });
+
+            await planearMaratonTematico(req, res);
+
+            expect(tmdbService.descubrirPeliculasPorGenero).toHaveBeenCalledTimes(3);
+            expect(tmdbService.descubrirPeliculasPorGenero).toHaveBeenNthCalledWith(1, ['Acción'], 1);
+            expect(tmdbService.descubrirPeliculasPorGenero).toHaveBeenNthCalledWith(2, ['Acción'], 2);
+            expect(tmdbService.descubrirPeliculasPorGenero).toHaveBeenNthCalledWith(3, ['Acción'], 3);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                exito: true,
+                plan: expect.objectContaining({ peliculas: ['peli_tematica'] })
+            }));
+        });
     });
 });

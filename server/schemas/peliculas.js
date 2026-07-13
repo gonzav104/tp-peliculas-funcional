@@ -19,7 +19,7 @@ export const maratonSchema = z.object({
 
     ratingMinimo: z.number().min(0).max(10).default(0).optional(),
 
-    maximoPeliculas: z.number().int().positive().optional()
+    maximoPeliculas: z.number().int().positive().max(20).optional()
 });
 
 // Esquema para Maratón Temático
@@ -33,7 +33,7 @@ export const maratonTematicoSchema = z.object({
 
     // Campos nuevos para control fino
     ratingMinimo: z.number().min(0).max(10).default(5.0).optional(),
-    maximoPeliculas: z.number().int().positive().default(10).optional()
+    maximoPeliculas: z.number().int().positive().max(20).default(10).optional()
 });
 
 // Esquema para Maratón por Década
@@ -47,7 +47,7 @@ export const maratonDecadaSchema = z.object({
      ,
      // Filtrado adicional por rating cuando se planifica por década
      ratingMinimo: z.number().min(0).max(10).optional(),
-     maximoPeliculas: z.number().int().positive().optional()
+     maximoPeliculas: z.number().int().positive().max(20).optional()
  });
 
 

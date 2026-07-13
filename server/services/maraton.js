@@ -109,20 +109,13 @@ const crearOptimizadorMaraton = () => {
     return optimizar;
 };
 
-const tieneGeneroBuscado = (pelicula, generosBuscados) =>
-    Array.isArray(pelicula.generos) &&
-    pelicula.generos.some(g => generosBuscados.includes(g.toLowerCase()));
-
 export const planificarMaraton = (peliculas, tiempoDisponibleMinutos, opciones = {}) => {
-    const { ratingMinimo = 6.0, maximoPeliculas = 10, preferirRecientes = false } = opciones;
+    const { ratingMinimo = 6.0, maximoPeliculas = 10 } = opciones;
 
     const filtradasPorValidez = filtrarPeliculasValidas(peliculas);
     const candidatas = filtradasPorValidez.filter(p => p.rating >= ratingMinimo);
-    // Si se prefieren recientes, ordenar exclusivamente por fecha
-    // Si no, ordenar por valor/rating (exclusivo). No ejecutar ambas ordenaciones.
-    const candidatasOrdenadas = preferirRecientes
-        ? ordenarPorFechaDesc(candidatas)
-        : ordenarPorValor(candidatas);
+    // Ordenar por valor/rating
+    const candidatasOrdenadas = ordenarPorValor(candidatas);
 
     // Limitamos el input del algoritmo para evitar Stack Overflow en casos extremos
     const candidatasFinales = limitarPeliculas(candidatasOrdenadas, 60);
@@ -145,11 +138,7 @@ export const planificarMaraton = (peliculas, tiempoDisponibleMinutos, opciones =
 };
 
 export const planificarMaratonTematico = (peliculas, tiempo, generos, opciones = {}) => {
-    const generosBuscados = generos.map(g => g.toLowerCase());
-
-    const filtradas = peliculas.filter(p => tieneGeneroBuscado(p, generosBuscados));
-
-    if (filtradas.length === 0) {
+    if (!Array.isArray(peliculas) || peliculas.length === 0) {
         return {
             peliculas: [],
             tiempoTotal: 0,
@@ -161,7 +150,7 @@ export const planificarMaratonTematico = (peliculas, tiempo, generos, opciones =
         };
     }
 
-    return planificarMaraton(filtradas, tiempo, opciones);
+    return planificarMaraton(peliculas, tiempo, opciones);
 };
 
 export const presetsMaraton = {

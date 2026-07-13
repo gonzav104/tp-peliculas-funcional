@@ -165,7 +165,7 @@ export const descubrirPeliculasPorGenero = async (generos = [], pagina = 1) => {
     if (generoIds.length === 0) return [];
 
     const resultado = await fetchTMDB('/discover/movie', {
-        'with_genres': generoIds.join(','),
+        'with_genres': generoIds.join('|'),
         'sort_by': 'popularity.desc',
         'page': pagina,
         'vote_average.gte': 5.0,

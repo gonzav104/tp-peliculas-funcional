@@ -21,7 +21,7 @@ const limiter = rateLimit({
     }
 });
 
-// --- MIDDLEWARES ESTÁNDAR ---
+// --- MIDDLEWARES ESTANDAR ---
 app.use(cors());
 app.use(express.json());
 

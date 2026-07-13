@@ -115,7 +115,11 @@ export const planearMaratonTematico = async (req, res) => {
 
     // Bug Fix 2: Usar endpoint discover/movie de TMDB con with_genres
     // en lugar de filtrar localmente sobre películas populares
-    const peliculasDescubiertas = await descubrirPeliculasPorGenero(input.generos, 1);
+    const paginasDescubrimiento = [1, 2, 3];
+    const resultadosPaginas = await Promise.all(
+        paginasDescubrimiento.map(pagina => descubrirPeliculasPorGenero(input.generos, pagina))
+    );
+    const peliculasDescubiertas = resultadosPaginas.flat();
 
     if (peliculasDescubiertas.length === 0) {
         const planVacio = { peliculas: [], tiempoTotal: 0, cantidadPeliculas: 0, tiempoDisponible: input.tiempo, tiempoRestante: input.tiempo, ratingPromedio: 0, descripcion: "No se encontraron películas con estos criterios." };
@@ -133,7 +137,9 @@ export const planearMaratonTematico = async (req, res) => {
     }
 
     // Enriquecer las películas descubiertas
-    const cantidadAEnriquecer = MODO_AHORRO ? LIMITES.MARATON_AHORRO : Math.min(peliculasDescubiertas.length, LIMITES.BUSQUEDA_PROD);
+    const cantidadAEnriquecer = MODO_AHORRO
+        ? LIMITES.MARATON_AHORRO
+        : Math.min(peliculasDescubiertas.length, LIMITES.MARATON_PROD);
     const peliculasEnriquecidas = await enriquecerListaPeliculas(peliculasDescubiertas.slice(0, cantidadAEnriquecer));
 
     const plan = planificarMaratonTematico(

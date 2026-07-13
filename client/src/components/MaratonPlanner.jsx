@@ -188,15 +188,15 @@ export const MaratonPlanner = () => {
                                 Tiempo disponible (minutos)
                                 <span className={styles.badge}>{tiempo} min ({Math.floor(tiempo / 60)}h {tiempo % 60}m)</span>
                             </label>
-                            <input
-                                type="range"
-                                min="60"
-                                max="720"
-                                step="30"
-                                value={tiempo}
-                                onChange={crearManejadorNumero(setTiempo)}
-                                className={styles.slider}
-                            />
+                             <input
+                                 type="range"
+                                 min="60"
+                                 max="1440"
+                                 step="30"
+                                 value={tiempo}
+                                 onChange={crearManejadorNumero(setTiempo)}
+                                 className={styles.slider}
+                             />
                         </div>
 
                         <div className={styles.inputGroup}>
@@ -246,23 +246,23 @@ export const MaratonPlanner = () => {
                         </p>
 
                         <div className={styles.inputGroup}>
-                            <label>
-                                Tiempo disponible
-                                <span className={styles.badge}>{tiempoTematico} min</span>
-                            </label>
-                            <input
-                                type="range"
-                                min="60"
-                                max="720"
-                                step="30"
-                                value={tiempoTematico}
-                                onChange={crearManejadorNumero(setTiempoTematico)}
-                                className={styles.slider}
-                            />
-                        </div>
+                             <label>
+                                 Tiempo disponible
+                                 <span className={styles.badge}>{tiempoTematico} min ({Math.floor(tiempoTematico / 60)}h {tiempoTematico % 60}m)</span>
+                             </label>
+                             <input
+                                 type="range"
+                                 min="60"
+                                 max="1440"
+                                 step="30"
+                                 value={tiempoTematico}
+                                 onChange={crearManejadorNumero(setTiempoTematico)}
+                                 className={styles.slider}
+                             />
+                         </div>
 
-                        <div className={styles.inputGroup}>
-                            <label>Selecciona géneros ({generosSeleccionados.length} elegidos)</label>
+                         <div className={styles.inputGroup}>
+                             <label>Selecciona géneros ({generosSeleccionados.length} elegidos)</label>
                             <div className={styles.generoGrid}>
                                 {GENEROS_DISPONIBLES.map(genero => (
                                     <button
@@ -312,12 +312,12 @@ export const MaratonPlanner = () => {
                         <div className={styles.inputGroup}>
                             <label>
                                 Tiempo disponible
-                                <span className={styles.badge}>{tiempoDecada} min</span>
+                                 <span className={styles.badge}>{tiempoDecada} min ({Math.floor(tiempoDecada / 60)}h {tiempoDecada % 60}m)</span>
                             </label>
                             <input
                                 type="range"
                                 min="60"
-                                max="720"
+                                max="1440"
                                 step="30"
                                 value={tiempoDecada}
                                 onChange={crearManejadorNumero(setTiempoDecada)}
