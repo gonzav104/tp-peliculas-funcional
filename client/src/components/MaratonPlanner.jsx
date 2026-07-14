@@ -83,11 +83,13 @@ export const MaratonPlanner = () => {
     const [tiempoTematico, setTiempoTematico] = useState(180);
     const [generosSeleccionados, setGenerosSeleccionados] = useState([]);
     const [ratingTematico, setRatingTematico] = useState(6.0);
+    const [maximoTematico, setMaximoTematico] = useState(10);
 
     // Estados para Tab 3: Década
     const [tiempoDecada, setTiempoDecada] = useState(150);
     const [decadaSeleccionada, setDecadaSeleccionada] = useState(1990);
     const [ratingDecada, setRatingDecada] = useState(6.0);
+    const [maximoDecada, setMaximoDecada] = useState(10);
 
     // Estado global
     const [resultado, setResultado] = useState(null);
@@ -132,7 +134,8 @@ export const MaratonPlanner = () => {
             () => planificarMaratonTematico({
                 tiempo: tiempoTematico,
                 generos: generosSeleccionados,
-                ratingMinimo: ratingTematico
+                ratingMinimo: ratingTematico,
+                maximoPeliculas: maximoTematico
             }),
             'tematico',
             () => obtenerErrorTematico(generosSeleccionados)
@@ -145,7 +148,8 @@ export const MaratonPlanner = () => {
             () => planificarMaratonDecada({
                 tiempo: tiempoDecada,
                 decada: decadaSeleccionada,
-                ratingMinimo: ratingDecada
+                ratingMinimo: ratingDecada,
+                maximoPeliculas: maximoDecada
             }),
             'decada'
         );
@@ -295,6 +299,22 @@ export const MaratonPlanner = () => {
                             />
                         </div>
 
+                        <div className={styles.inputGroup}>
+                            <label>
+                                Máximo de películas
+                                <span className={styles.badge}>{maximoTematico}</span>
+                            </label>
+                            <input
+                                type="range"
+                                min="1"
+                                max="20"
+                                step="1"
+                                value={maximoTematico}
+                                onChange={crearManejadorNumero(setMaximoTematico)}
+                                className={styles.slider}
+                            />
+                        </div>
+
                         <button type="submit" className={styles.btnSubmit} disabled={loading}>
                             {loading ? 'Calculando...' : 'Generar Maratón'}
                         </button>
@@ -355,6 +375,22 @@ export const MaratonPlanner = () => {
                                 step="0.5"
                                 value={ratingDecada}
                                 onChange={crearManejadorNumero(setRatingDecada)}
+                                className={styles.slider}
+                            />
+                        </div>
+
+                        <div className={styles.inputGroup}>
+                            <label>
+                                Máximo de películas
+                                <span className={styles.badge}>{maximoDecada}</span>
+                            </label>
+                            <input
+                                type="range"
+                                min="1"
+                                max="20"
+                                step="1"
+                                value={maximoDecada}
+                                onChange={crearManejadorNumero(setMaximoDecada)}
                                 className={styles.slider}
                             />
                         </div>

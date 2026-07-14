@@ -85,7 +85,7 @@ export const obtenerPeliculasCalidad = async () => {
     );
 };
 
-export const descubrirPeliculasPorDecada = async (decada) => {
+export const descubrirPeliculasPorDecada = async (decada, pagina = 1) => {
     const inicio = `${decada}-01-01`;
     const fin = `${decada + 9}-12-31`;
 
@@ -93,6 +93,7 @@ export const descubrirPeliculasPorDecada = async (decada) => {
         'primary_release_date.gte': inicio,
         'primary_release_date.lte': fin,
         'sort_by': 'popularity.desc',
+        'page': pagina,
         'vote_average.gte': 6.0,
         'vote_count.gte': 100
     }, TMDBListResponseSchema);

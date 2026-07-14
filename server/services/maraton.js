@@ -137,22 +137,6 @@ export const planificarMaraton = (peliculas, tiempoDisponibleMinutos, opciones =
     };
 };
 
-export const planificarMaratonTematico = (peliculas, tiempo, generos, opciones = {}) => {
-    if (!Array.isArray(peliculas) || peliculas.length === 0) {
-        return {
-            peliculas: [],
-            tiempoTotal: 0,
-            tiempoDisponible: tiempo,
-            tiempoRestante: tiempo,
-            ratingPromedio: 0,
-            cantidadPeliculas: 0,
-            descripcion: `No pudimos encontrar películas de los géneros: ${generos.join(', ')}.`
-        };
-    }
-
-    return planificarMaraton(peliculas, tiempo, opciones);
-};
-
 export const presetsMaraton = {
     tarde: 240,
     noche: 360,

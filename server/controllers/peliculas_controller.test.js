@@ -19,7 +19,6 @@ jest.unstable_mockModule('../services/unificador.js', () => ({
 
 jest.unstable_mockModule('../services/maraton.js', () => ({
     planificarMaraton: jest.fn(),
-    planificarMaratonTematico: jest.fn(),
     analizarPlan: jest.fn(),
     presetsMaraton: {}
 }));
@@ -151,18 +150,26 @@ describe('Controller de Películas (Validación Zod & Manejo de Errores)', () =>
             }));
         });
 
-        test('Debe consultar 3 páginas en maratón temático y usar el límite de producción', async () => {
+        test('Debe consultar 3 páginas en maratón temático, enriquecer y planificar', async () => {
             const { planearMaratonTematico } = await import('./peliculas_controller.js');
             const req = mockReq({}, { tiempo: 180, generos: ['Acción'], ratingMinimo: 6, maximoPeliculas: 10 });
             const res = mockRes();
 
+            // Mock: 3 páginas devuelven distintas películas
             tmdbService.descubrirPeliculasPorGenero
                 .mockResolvedValueOnce([{ id: 1 }, { id: 2 }])
                 .mockResolvedValueOnce([{ id: 3 }])
                 .mockResolvedValueOnce([{ id: 4 }, { id: 5 }, { id: 6 }]);
 
+            // Mock: enriquecimiento devuelve las películas con datos completos
+            const unificador = await import('../services/unificador.js');
+            unificador.enriquecerListaPeliculas.mockResolvedValue([
+                { id: 1, titulo: 'Peli 1', rating: 8.0, duracion: 90, generos: ['Acción'] },
+                { id: 4, titulo: 'Peli 4', rating: 7.0, duracion: 120, generos: ['Acción'] }
+            ]);
+
             const planMock = { peliculas: ['peli_tematica'], tiempoTotal: 100, ratingPromedio: 7.2, cantidadPeliculas: 1 };
-            maratonService.planificarMaratonTematico.mockReturnValue(planMock);
+            maratonService.planificarMaraton.mockReturnValue(planMock);
             maratonService.analizarPlan.mockReturnValue({ eficienciaTemporal: '55.6%', peliculasExcelentes: 1, tiempoLibre: '1h 20m', calidadGeneral: 'Buena' });
 
             await planearMaratonTematico(req, res);
@@ -171,9 +178,48 @@ describe('Controller de Películas (Validación Zod & Manejo de Errores)', () =>
             expect(tmdbService.descubrirPeliculasPorGenero).toHaveBeenNthCalledWith(1, ['Acción'], 1);
             expect(tmdbService.descubrirPeliculasPorGenero).toHaveBeenNthCalledWith(2, ['Acción'], 2);
             expect(tmdbService.descubrirPeliculasPorGenero).toHaveBeenNthCalledWith(3, ['Acción'], 3);
+            // Ahora usa planificarMaraton en vez de planificarMaratonTematico
+            expect(maratonService.planificarMaraton).toHaveBeenCalledWith(
+                expect.arrayContaining([expect.objectContaining({ id: 1 })]),
+                180,
+                expect.objectContaining({ maximoPeliculas: 10 })
+            );
             expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
                 exito: true,
                 plan: expect.objectContaining({ peliculas: ['peli_tematica'] })
+            }));
+        });
+        
+        test('Debe consultar 3 páginas en maratón por década y enriquecer', async () => {
+            const { planearMaratonDecada } = await import('./peliculas_controller.js');
+            const req = mockReq({}, { tiempo: 240, decada: 1990, ratingMinimo: 6 });
+            const res = mockRes();
+
+            // Mock: 3 páginas con películas de la década
+            tmdbService.descubrirPeliculasPorDecada
+                .mockResolvedValueOnce([{ id: 10 }, { id: 11 }])
+                .mockResolvedValueOnce([{ id: 12 }])
+                .mockResolvedValueOnce([{ id: 13 }, { id: 14 }]);
+
+            const unificador = await import('../services/unificador.js');
+            unificador.enriquecerListaPeliculas.mockResolvedValue([
+                { id: 10, titulo: 'Clásico 1', rating: 8.5, duracion: 110, generos: ['Drama'] }
+            ]);
+
+            const planMock = { peliculas: ['peli_decada'], tiempoTotal: 110, ratingPromedio: 8.5, cantidadPeliculas: 1 };
+            maratonService.planificarMaraton.mockReturnValue(planMock);
+            maratonService.analizarPlan.mockReturnValue({ eficienciaTemporal: '45.8%', peliculasExcelentes: 1, tiempoLibre: '2h 10m', calidadGeneral: 'Excelente' });
+
+            await planearMaratonDecada(req, res);
+
+            expect(tmdbService.descubrirPeliculasPorDecada).toHaveBeenCalledTimes(3);
+            expect(tmdbService.descubrirPeliculasPorDecada).toHaveBeenNthCalledWith(1, 1990, 1);
+            expect(tmdbService.descubrirPeliculasPorDecada).toHaveBeenNthCalledWith(2, 1990, 2);
+            expect(tmdbService.descubrirPeliculasPorDecada).toHaveBeenNthCalledWith(3, 1990, 3);
+            expect(unificador.enriquecerListaPeliculas).toHaveBeenCalled();
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+                exito: true,
+                plan: expect.objectContaining({ peliculas: ['peli_decada'] })
             }));
         });
     });

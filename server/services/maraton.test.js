@@ -1,4 +1,4 @@
-import { planificarMaraton, planificarMaratonTematico, analizarPlan, presetsMaraton } from './maraton.js';
+import { planificarMaraton, analizarPlan, presetsMaraton } from './maraton.js';
 
 describe('Servicio de Maratón', () => {
 
@@ -47,18 +47,6 @@ describe('Servicio de Maratón', () => {
         expect(analisis).toHaveProperty('peliculasExcelentes');
         expect(analisis).toHaveProperty('tiempoLibre');
         expect(analisis).toHaveProperty('calidadGeneral');
-    });
-
-    test('planificarMaratonTematico planifica con las películas recibidas', () => {
-        const peliculasConGenero = [
-            { id: 1, titulo: 'Acción 1', rating: 7.5, duracion: 100, generos: ['Acción'] },
-            { id: 2, titulo: 'Drama 1', rating: 8.0, duracion: 90, generos: ['Drama'] },
-            { id: 3, titulo: 'Acción 2', rating: 7.0, duracion: 110, generos: ['Acción', 'Thriller'] },
-        ];
-
-        const plan = planificarMaratonTematico(peliculasConGenero, 300, ['Acción']);
-        expect(plan.peliculas.length).toBeGreaterThan(0);
-        expect(plan.tiempoTotal).toBeLessThanOrEqual(300);
     });
 
     test('presetsMaraton tiene duraciones esperadas', () => {

@@ -15,7 +15,6 @@ import {
 
 import {
     planificarMaraton,
-    planificarMaratonTematico,
     analizarPlan,
     presetsMaraton
 } from '../services/maraton.js';
@@ -142,26 +141,59 @@ export const planearMaratonTematico = async (req, res) => {
         : Math.min(peliculasDescubiertas.length, LIMITES.MARATON_PROD);
     const peliculasEnriquecidas = await enriquecerListaPeliculas(peliculasDescubiertas.slice(0, cantidadAEnriquecer));
 
-    const plan = planificarMaratonTematico(
+    if (!Array.isArray(peliculasEnriquecidas) || peliculasEnriquecidas.length === 0) {
+        const planVacio = {
+            peliculas: [], tiempoTotal: 0, cantidadPeliculas: 0,
+            tiempoDisponible: input.tiempo, tiempoRestante: input.tiempo,
+            ratingPromedio: 0,
+            descripcion: `No pudimos encontrar películas de los géneros: ${input.generos.join(', ')}.`
+        };
+        return success(res, {
+            tematica: input.generos.join(', '),
+            plan: planVacio,
+            analisis: {
+                eficienciaTemporal: "0%",
+                peliculasExcelentes: 0,
+                tiempoLibre: input.tiempo,
+                calidadGeneral: "N/A"
+            }
+        });
+    }
+
+    const plan = planificarMaraton(
         peliculasEnriquecidas,
         input.tiempo,
-        input.generos,
         {
             ratingMinimo: MODO_AHORRO ? 0 : input.ratingMinimo,
             maximoPeliculas: input.maximoPeliculas
         }
     );
 
-    const analisis = analizarPlan(plan);
+    // Safety: verificar que el plan sea un objeto válido
+    const planValido = (
+        plan && typeof plan === 'object' && !Array.isArray(plan) && plan.peliculas
+    ) ? plan : {
+        peliculas: [], tiempoTotal: 0, cantidadPeliculas: 0,
+        tiempoDisponible: input.tiempo, tiempoRestante: input.tiempo,
+        ratingPromedio: 0,
+        descripcion: `No pudimos encontrar películas de los géneros: ${input.generos.join(', ')}.`
+    };
 
-    success(res, { tematica: input.generos.join(', '), plan, analisis });
+    const analisis = analizarPlan(planValido);
+
+    success(res, { tematica: input.generos.join(', '), plan: planValido, analisis });
 };
 
 export const planearMaratonDecada = async (req, res) => {
     const input = validar(maratonDecadaSchema, req.body, res);
     if (!input) return;
 
-    const peliculasClasicas = await descubrirPeliculasPorDecada(input.decada);
+    // Traer 3 páginas para darle más data al Knapsack (consistente con maratón temático)
+    const paginasDecada = [1, 2, 3];
+    const resultadosPorPagina = await Promise.all(
+        paginasDecada.map(pagina => descubrirPeliculasPorDecada(input.decada, pagina))
+    );
+    const peliculasClasicas = resultadosPorPagina.flat();
 
     // Bug Fix 3: Si no hay películas, retornar un objeto válido que respete el contrato del frontend
     // NUNCA retornar un array vacío. El frontend espera siempre { peliculas: [], tiempoTotal: 0, ... }
