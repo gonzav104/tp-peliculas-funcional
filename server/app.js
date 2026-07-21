@@ -22,7 +22,16 @@ const limiter = rateLimit({
 });
 
 // --- MIDDLEWARES ESTANDAR ---
-app.use(cors());
+const corsOptions = {
+    origin: [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'https://lemon-pebble-0059f490f.7.azurestaticapps.net'
+    ],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // --- RUTAS ---
