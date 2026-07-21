@@ -28,8 +28,8 @@ const corsOptions = {
         'http://localhost:5173',
         'https://lemon-pebble-0059f490f.7.azurestaticapps.net'
     ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 };
 app.use(cors(corsOptions));
 app.use(express.json());
