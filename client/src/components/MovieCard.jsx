@@ -51,7 +51,7 @@ export const MovieCard = ({ pelicula }) => {
             >
                 <div className={styles.posterContainer}>
                     <img
-                        src={pelicula.imagen || 'https://via.placeholder.com/300x450?text=Sin+Imagen'}
+                        src={pelicula.imagen || 'https://placehold.co/300x450?text=Sin+Imagen'}
                         alt=""
                         className={styles.poster}
                         loading="lazy"
@@ -92,7 +92,7 @@ export const MovieCard = ({ pelicula }) => {
                         <div className={styles.detailsGrid}>
                             <div className={styles.detailsPoster}>
                                 <img
-                                    src={pelicula.imagen || 'https://via.placeholder.com/300x450?text=Sin+Imagen'}
+src={pelicula.imagen || 'https://placehold.co/300x450?text=Sin+Imagen'}
                                     alt={pelicula.titulo}
                                     className={styles.detailsPosterImg}
                                 />
@@ -158,7 +158,7 @@ export const MovieCard = ({ pelicula }) => {
                                             {pelicula.reparto.slice(0, 6).map((actor, idx) => (
                                                 <div key={idx} className={styles.castItem}>
                                                     <img
-                                                        src={actor.foto || 'https://via.placeholder.com/100x100?text=?'}
+                                                        src={actor.foto || 'https://placehold.co/100x100?text=?'}
                                                         alt={actor.nombre}
                                                         className={styles.castImg}
                                                     />

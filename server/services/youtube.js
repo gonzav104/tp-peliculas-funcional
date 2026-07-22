@@ -11,7 +11,7 @@ const FALLBACK_VIDEO = {
     id: 'fallback_quota',
     titulo: 'Trailer no disponible (Cuota YouTube Agotada)',
     descripcion: 'Lo sentimos, se ha alcanzado el límite diario de peticiones a YouTube.',
-    thumbnail: 'https://via.placeholder.com/640x360?text=Trailer+No+Disponible',
+    thumbnail: 'https://placehold.co/640x360?text=Trailer+No+Disponible',
     canal: 'Sistema CineFuncional',
     fechaPublicacion: new Date().toISOString(),
     url: 'https://www.youtube.com/watch?v=EngW7tLk6R8', // Intro genérica
