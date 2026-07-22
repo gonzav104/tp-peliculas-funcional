@@ -193,7 +193,8 @@ export const buscarPeliculas = async (query) => {
 export const obtenerDetallesPelicula = async (id) => {
     // Validamos con el esquema detallado
     const resultado = await fetchTMDB(`/movie/${id}`, {
-        append_to_response: 'credits,videos'
+        append_to_response: 'credits,videos',
+        include_video_language: 'en,es'
     }, TMDBDetailResponseSchema);
 
     return resultado.fold(

@@ -11,14 +11,33 @@ const limit = pLimit(LIMIT_CONCURRENCY);
 const obtenerValorSettled = (resultado) =>
     resultado.status === 'fulfilled' ? resultado.value : null;
 
-const extraerTrailerDesdeTMDB = (datosTMDB) => {
-    const videoTMDB = datosTMDB.videos?.find(v =>
+const priorizarTrailer = (videos) => {
+    const trailers = videos.filter(v =>
         v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')
     );
+    if (trailers.length === 0) return null;
 
+    // Prioridad: inglés official > inglés cualquier > otro idioma official > cualquier otro
+    const enOficial = trailers.find(v => v.iso_639_1 === 'en' && v.official === true);
+    if (enOficial) return enOficial;
+
+    const enNoOficial = trailers.find(v => v.iso_639_1 === 'en');
+    if (enNoOficial) return enNoOficial;
+
+    const otroOficial = trailers.find(v => v.official === true);
+    if (otroOficial) return otroOficial;
+
+    return trailers[0];
+};
+
+const extraerTrailerDesdeTMDB = (datosTMDB) => {
+    if (!datosTMDB.videos?.length) return null;
+
+    const videoTMDB = priorizarTrailer(datosTMDB.videos);
     if (!videoTMDB) return null;
 
-    logger.debug(`Trailer encontrado en TMDB para "${datosTMDB.titulo}" (Ahorro de cuota)`);
+    const idioma = videoTMDB.iso_639_1?.toUpperCase() || 'desconocido';
+    logger.debug(`Trailer encontrado en TMDB para "${datosTMDB.titulo}" (${idioma}) (Ahorro de cuota)`);
     return {
         id: videoTMDB.key,
         titulo: `Trailer: ${datosTMDB.titulo}`,
