@@ -239,8 +239,8 @@ src={pelicula.imagen || 'https://placehold.co/300x450?text=Sin+Imagen'}
                             title="Trailer"
                             className={styles.iframe}
                             allowFullScreen
-                            allow="autoplay"
-                        ></iframe>
+                            allow="autoplay; encrypted-media"
+                            referrerPolicy="strict-origin-when-cross-origin"></iframe>
                     </div>
                 </div>
             )}
